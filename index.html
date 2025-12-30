@@ -1,0 +1,2273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="https://www.bg6qed.com/img/radio-transmitter.png" type="image/x-icon" />
+    <title>NetLog - 业余无线电中继点名记录工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pinyin-match@1.2.2/dist/main.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-light: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #cbd5e1;
+            --tag-bg: #e0f2fe;
+            --tag-text: #0369a1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            --transition: all 0.2s ease;
+        }
+        body.dark {
+            --primary: #60a5fa;
+            --primary-light: #93c5fd;
+            --primary-dark: #3b82f6;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --border: #334155;
+            --tag-bg: #1e293b;
+            --tag-text: #7dd3fc;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        }
+        * { 
+            box-sizing: border-box; 
+            margin: 0;
+            padding: 0;
+        }
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            padding: 1rem;
+            line-height: 1.5;
+            transition: var(--transition);
+        }
+        
+        /* 布局 */
+        .app-container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            display: grid; 
+            grid-template-columns: 350px 1fr; 
+            gap: 1rem; 
+        }
+        @media (max-width: 900px) { 
+            .app-container { 
+                grid-template-columns: 1fr; 
+            } 
+        }
+
+        /* 卡片通用 */
+        .card { 
+            background: var(--card); 
+            border-radius: 12px; 
+            padding: 1.2rem; 
+            border: 1px solid var(--border); 
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+        .card:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        .card-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 1rem; 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* 表单控件 */
+        .form-grid { 
+            display: grid; 
+            gap: 12px; 
+        }
+        .row-2, .row-3 { 
+            display: grid; 
+            gap: 12px; 
+        }
+        .row-2 { grid-template-columns: 1fr 1fr; }
+        .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+        @media (max-width: 576px) {
+            .row-2, .row-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        .input-group {
+            margin-bottom: 4px;
+            position: relative;
+        }
+        .input-group label { 
+            display: block; 
+            font-size: 0.8rem; 
+            color: var(--text-light); 
+            margin-bottom: 4px; 
+        }
+        input, select, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid var(--border); 
+            border-radius: 6px; 
+            background: var(--card); 
+            color: var(--text); 
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        input:focus, select:focus, textarea:focus { 
+            outline: 2px solid var(--primary); 
+            border-color: transparent; 
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* 按钮 */
+        .btn { 
+            padding: 8px 16px; 
+            border-radius: 6px; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 500; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: var(--transition);
+            font-size: 0.9rem;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-primary { 
+            background: var(--primary); 
+            color: white; 
+        }
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        .btn-danger { 
+            background: var(--danger); 
+            color: white; 
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .btn-success { 
+            background: var(--success); 
+            color: white; 
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-outline { 
+            border: 1px solid var(--border); 
+            background: transparent; 
+            color: var(--text); 
+        }
+        .btn-outline:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .btn-sm { 
+            padding: 4px 8px; 
+            font-size: 12px; 
+        }
+
+        /* 表格 */
+        .table-wrap { 
+            overflow-x: auto; 
+            flex: 1;
+            min-height: 0;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            min-width: 1000px; 
+        }
+        th, td { 
+            padding: 12px 10px; 
+            text-align: left; 
+            border-bottom: 1px solid var(--border); 
+            transition: var(--transition);
+        }
+        th { 
+            background: rgba(0,0,0,0.03); 
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        tr:hover td {
+            background: rgba(0,0,0,0.02);
+        }
+        
+        /* 模态框 (Tabs & Manager) */
+        .modal-overlay { 
+            position: fixed; 
+            top:0; 
+            left:0; 
+            width:100%; 
+            height:100%; 
+            background: rgba(0,0,0,0.5); 
+            display: none; 
+            justify-content: center; 
+            align-items: center; 
+            z-index: 1000; 
+            backdrop-filter: blur(3px);
+        }
+        .modal { 
+            background: var(--card); 
+            width: 90%; 
+            max-width: 900px; 
+            height: 85vh; 
+            border-radius: 12px; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header { 
+            padding: 1rem; 
+            border-bottom: 1px solid var(--border); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        
+        .tabs { 
+            display: flex; 
+            gap: 10px; 
+            padding: 10px 1rem; 
+            background: rgba(0,0,0,0.02); 
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+        .tab-btn { 
+            padding: 6px 12px; 
+            cursor: pointer; 
+            border-radius: 4px; 
+            border: 1px solid transparent; 
+            white-space: nowrap;
+            transition: var(--transition);
+        }
+        .tab-btn.active { 
+            background: var(--primary); 
+            color: white; 
+        }
+        .tab-btn:not(.active):hover {
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .modal-body { 
+            padding: 1.5rem; 
+            overflow-y: auto; 
+            flex: 1; 
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        /* 标签式管理 (Tags) */
+        .tag-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 8px; 
+            margin-top: 10px; 
+            margin-bottom: 20px; 
+        }
+        .tag { 
+            background: var(--tag-bg); 
+            color: var(--tag-text); 
+            padding: 4px 10px; 
+            border-radius: 16px; 
+            font-size: 0.9rem; 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            transition: var(--transition);
+        }
+        .tag:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tag i { 
+            cursor: pointer; 
+            opacity: 0.6; 
+            transition: var(--transition);
+        }
+        .tag i:hover { 
+            opacity: 1; 
+            color: var(--danger); 
+        }
+
+        /* 批量导入区域 */
+        .import-area {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+        }
+        .import-area textarea { 
+            height: 150px; 
+            font-family: monospace; 
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        .helper-text { 
+            font-size: 0.85rem; 
+            color: var(--text-light); 
+            margin-bottom: 10px; 
+            line-height: 1.4;
+        }
+
+        /* 字典编辑表格 */
+        .dict-editor { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+        }
+        .dict-editor th, .dict-editor td { 
+            padding: 8px; 
+            text-align: left; 
+            border: 1px solid var(--border); 
+        }
+        .dict-editor input { 
+            padding: 4px; 
+            width: 100%; 
+        }
+
+        /* 匹配提示下拉框 */
+        .suggestions {
+            position: absolute;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            width: calc(100% - 2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            scrollbar-width: thin;
+            top: 100%;
+            left: 0;
+            margin-top: 2px;
+        }
+        .suggestion-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .suggestion-item:hover {
+            background: var(--tag-bg);
+        }
+        .suggestion-item.highlighted {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: rgba(0,0,0,0.8);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* 状态提示 */
+        .status-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 6px;
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        .status-message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .status-message.warning {
+            background: var(--warning);
+        }
+        .status-message.success {
+            background: var(--success);
+        }
+        .status-message.error {
+            background: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <!-- 状态提示框 -->
+    <div class="status-message" id="statusMessage"></div>
+
+    <div class="app-container">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="fas fa-edit"></i> 快速录入</span>
+                <div style="font-size:0.8rem; font-weight:normal">
+                    <button class="btn btn-outline btn-sm tooltip" onclick="toggleTheme()">
+                        <i class="fas fa-moon"></i>
+                        <span class="tooltip-text">切换明暗模式</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-grid" id="entryForm">
+                <!-- 日期和时间在一行 -->
+                <div class="row-2">
+                    <div class="input-group">
+                        <label>日期 (Date)</label>
+                        <input type="date" id="inp-date">
+                    </div>
+                    <div class="input-group">
+                        <label>时间 (Time) - 自动记录</label>
+                        <input type="time" id="inp-time" readonly>
+                    </div>
+                </div>
+
+                <!-- 操作员单独一行 -->
+                <div class="input-group">
+                    <label>操作员 (OP)</label>
+                    <input type="text" id="inp-op" list="dyn-list-op" placeholder="当前操作员" 
+                           onkeydown="handleInputKeydown(event, 'op', 'inp-freq')">
+                    <datalist id="dyn-list-op"></datalist>
+                </div>
+
+                <div class="row-2">
+                    <div class="input-group">
+                        <label>频率 (Freq)</label>
+                        <input type="text" id="inp-freq" value="438.500" 
+                               onkeydown="handleInputKeydown(event, null, 'inp-net')">
+                    </div>
+                    <div class="input-group">
+                        <label>台网名称</label>
+                        <input type="text" id="inp-net" list="dyn-list-net" placeholder="如：XX地区中继" 
+                               onkeydown="handleInputKeydown(event, 'net', 'inp-call')">
+                        <datalist id="dyn-list-net"></datalist>
+                    </div>
+                </div>
+
+                <div class="input-group" style="position: relative;">
+                    <label>呼号 (Callsign) <span style="color:var(--danger)">*</span></label>
+                          <input type="text" id="inp-call" placeholder="输入呼号 回车匹配" autocomplete="off" 
+                              style="text-transform: uppercase; font-weight: bold; font-size: 1.1rem;" 
+                              onkeydown="handleCallKeydown(event)" 
+                              oninput="searchCallSuggestions(this.value)">
+                    <div class="suggestions" id="call-suggestions"></div>
+                </div>
+
+                <div class="row-2">
+                    <div class="input-group">
+                        <label>信号 (RST)</label>
+                        <input type="text" id="inp-rst" value="59" 
+                               onkeydown="handleInputKeydown(event, null, 'inp-mode')">
+                    </div>
+                    <div class="input-group">
+                        <label>模式 (Mode)</label>
+                            <select id="inp-mode" 
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('inp-qth').focus();}">
+                            <option>FM</option><option>DMR</option><option>D-Star</option><option>YSF</option><option>DIGI</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr style="width:100%; border:0; border-top:1px dashed var(--border); margin: 5px 0;">
+
+                <div class="input-group" style="position: relative;">
+                    <label>位置 (QTH) - 支持拼音搜索</label>
+                    <input type="text" id="inp-qth" placeholder="城市/网格" 
+                           onkeydown="handleSuggestionKeydown(event, 'qth', 'inp-rig')" 
+                           oninput="searchDict('qth', this.value)">
+                    <div class="suggestions" id="qth-suggestions"></div>
+                </div>
+
+                <div class="row-2">
+                    <div class="input-group" style="position: relative;">
+                        <label>设备 (Rig)</label>
+                        <input type="text" id="inp-rig" placeholder="如 FT-891" 
+                               onkeydown="handleSuggestionKeydown(event, 'rig', 'inp-pwr')" 
+                               oninput="searchDict('rig', this.value)">
+                        <div class="suggestions" id="rig-suggestions"></div>
+                    </div>
+                    <div class="input-group" style="position: relative;">
+                        <label>功率 (Pwr)</label>
+                        <input type="text" id="inp-pwr" placeholder="50W" 
+                               onkeydown="handleSuggestionKeydown(event, 'pwr', 'inp-ant')" 
+                               oninput="searchDict('pwr', this.value)">
+                        <div class="suggestions" id="pwr-suggestions"></div>
+                    </div>
+                </div>
+
+                <div class="input-group" style="position: relative;">
+                    <label>天线 (Ant)</label>
+                    <input type="text" id="inp-ant" placeholder="GP/Yagi" 
+                           onkeydown="handleSuggestionKeydown(event, 'ant', 'inp-rem')" 
+                           oninput="searchDict('ant', this.value)">
+                    <div class="suggestions" id="ant-suggestions"></div>
+                </div>
+
+                <div class="input-group">
+                    <label>备注 (Rem)</label>
+                    <input type="text" id="inp-rem" 
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();addLog();}">
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <button class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;" onclick="addLog()">
+                        <i class="fas fa-plus-circle"></i> 提交记录 (Enter)
+                    </button>
+                </div>
+                <div style="text-align:right; font-size:0.8rem; color:var(--text-light); margin-top:5px;">
+                    * 可使用上下箭头选择建议项，Tab填充，Enter提交
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="display:flex; flex-direction:column;">
+            <div class="card-header">
+                <span>日志列表 (<span id="count-display">0</span>)</span>
+                <div style="display:flex; gap:8px; flex-wrap: wrap;">
+                    <button class="btn btn-outline btn-sm tooltip" onclick="openManager()">
+                        <i class="fas fa-database"></i> 字典/数据管理
+                        <span class="tooltip-text">管理所有字典和历史数据</span>
+                    </button>
+                    <button class="btn btn-success btn-sm tooltip" onclick="exportExcel()">
+                        <i class="fas fa-file-excel"></i> 导出
+                        <span class="tooltip-text">导出为Excel文件</span>
+                    </button>
+                    <button class="btn btn-outline btn-sm tooltip" onclick="exportAllDicts()">
+                        <i class="fas fa-download"></i> 导出字典
+                        <span class="tooltip-text">备份所有字典数据</span>
+                    </button>
+                    <button class="btn btn-outline btn-sm tooltip" onclick="clearAllLogs()">
+                        <i class="fas fa-trash"></i> 清空日志
+                        <span class="tooltip-text">删除所有记录</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table id="logTable">
+                    <thead>
+                        <tr>
+                            <th>#</th><th>日期</th><th>时间</th><th>呼号</th><th>信号</th><th>QTH</th><th>设备</th><th>功率</th><th>天线</th><th>备注</th><th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="managerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span><i class="fas fa-cogs"></i> 数据与字典管理</span>
+                <button class="btn btn-outline btn-sm" onclick="closeManager()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="tabs">
+                <div class="tab-btn active" data-tab="dict-qth">QTH 字典</div>
+                <div class="tab-btn" data-tab="dict-rig">设备字典</div>
+                <div class="tab-btn" data-tab="dict-pwr">功率字典</div>
+                <div class="tab-btn" data-tab="dict-ant">天线字典</div>
+                <div class="tab-btn" data-tab="dict-op">操作员字典</div>
+                <div class="tab-btn" data-tab="dict-net">台网字典</div>
+                <div class="tab-btn" data-tab="dict-call">呼号字典</div>
+                <div class="tab-btn" data-tab="log-data">日志数据</div>
+            </div>
+            
+            <div class="modal-body">
+                <!-- QTH字典 -->
+                <div class="tab-content active" id="dict-qth">
+                    <div class="import-area">
+                        <h4>批量导入QTH</h4>
+                        <p class="helper-text">每行输入一个位置信息，系统会自动去重。例如：<br>北京<br>上海<br>广州</p>
+                        <textarea id="import-qth" placeholder="在此输入要导入的QTH列表，每行一个..."></textarea>
+                        <button class="btn btn-primary" onclick="importDict('qth')">
+                            <i class="fas fa-upload"></i> 导入
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>添加/编辑QTH</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="edit-qth" placeholder="输入位置信息">
+                            <button class="btn btn-primary" onclick="addDictItem('qth')">添加</button>
+                            <button class="btn btn-outline" onclick="updateDictItem('qth')" id="update-qth-btn" disabled>更新</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tag-container" id="qth-tags"></div>
+                </div>
+                
+                <!-- 设备字典 -->
+                <div class="tab-content" id="dict-rig">
+                    <div class="import-area">
+                        <h4>批量导入设备</h4>
+                        <p class="helper-text">每行输入一个设备信息，系统会自动去重。例如：<br>FT-891<br>IC-7300<br>YAESU FT-70DR</p>
+                        <textarea id="import-rig" placeholder="在此输入要导入的设备列表，每行一个..."></textarea>
+                        <button class="btn btn-primary" onclick="importDict('rig')">
+                            <i class="fas fa-upload"></i> 导入
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>添加/编辑设备</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="edit-rig" placeholder="输入设备型号">
+                            <button class="btn btn-primary" onclick="addDictItem('rig')">添加</button>
+                            <button class="btn btn-outline" onclick="updateDictItem('rig')" id="update-rig-btn" disabled>更新</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tag-container" id="rig-tags"></div>
+                </div>
+                
+                <!-- 功率字典 -->
+                <div class="tab-content" id="dict-pwr">
+                    <div class="import-area">
+                        <h4>批量导入功率</h4>
+                        <p class="helper-text">每行输入一个功率信息，系统会自动去重。例如：<br>5W<br>25W<br>50W<br>100W</p>
+                        <textarea id="import-pwr" placeholder="在此输入要导入的功率列表，每行一个..."></textarea>
+                        <button class="btn btn-primary" onclick="importDict('pwr')">
+                            <i class="fas fa-upload"></i> 导入
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>添加/编辑功率</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="edit-pwr" placeholder="输入功率值">
+                            <button class="btn btn-primary" onclick="addDictItem('pwr')">添加</button>
+                            <button class="btn btn-outline" onclick="updateDictItem('pwr')" id="update-pwr-btn" disabled>更新</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tag-container" id="pwr-tags"></div>
+                </div>
+                
+                <!-- 天线字典 -->
+                <div class="tab-content" id="dict-ant">
+                    <div class="import-area">
+                        <h4>批量导入天线</h4>
+                        <p class="helper-text">每行输入一个天线信息，系统会自动去重。例如：<br>GP天线<br>Yagi 3单元<br>垂直天线</p>
+                        <textarea id="import-ant" placeholder="在此输入要导入的天线列表，每行一个..."></textarea>
+                        <button class="btn btn-primary" onclick="importDict('ant')">
+                            <i class="fas fa-upload"></i> 导入
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>添加/编辑天线</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="edit-ant" placeholder="输入天线类型">
+                            <button class="btn btn-primary" onclick="addDictItem('ant')">添加</button>
+                            <button class="btn btn-outline" onclick="updateDictItem('ant')" id="update-ant-btn" disabled>更新</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tag-container" id="ant-tags"></div>
+                </div>
+                
+                <!-- 操作员字典 -->
+                <div class="tab-content" id="dict-op">
+                    <div class="import-area">
+                        <h4>批量导入操作员</h4>
+                        <p class="helper-text">每行输入一个操作员信息，系统会自动去重。例如：<br>BG1XXX<br>BG2YYY<br>张三</p>
+                        <textarea id="import-op" placeholder="在此输入要导入的操作员列表，每行一个..."></textarea>
+                        <button class="btn btn-primary" onclick="importDict('op')">
+                            <i class="fas fa-upload"></i> 导入
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>添加/编辑操作员</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="edit-op" placeholder="输入操作员呼号或姓名">
+                            <button class="btn btn-primary" onclick="addDictItem('op')">添加</button>
+                            <button class="btn btn-outline" onclick="updateDictItem('op')" id="update-op-btn" disabled>更新</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tag-container" id="op-tags"></div>
+                </div>
+                
+                <!-- 台网字典 -->
+                <div class="tab-content" id="dict-net">
+                    <div class="import-area">
+                        <h4>批量导入台网</h4>
+                        <p class="helper-text">每行输入一个台网信息，系统会自动去重。例如：<br>北京中继<br>上海业余无线电中继<br>XX地区常规网</p>
+                        <textarea id="import-net" placeholder="在此输入要导入的台网列表，每行一个..."></textarea>
+                        <button class="btn btn-primary" onclick="importDict('net')">
+                            <i class="fas fa-upload"></i> 导入
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>添加/编辑台网</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="edit-net" placeholder="输入台网名称">
+                            <button class="btn btn-primary" onclick="addDictItem('net')">添加</button>
+                            <button class="btn btn-outline" onclick="updateDictItem('net')" id="update-net-btn" disabled>更新</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tag-container" id="net-tags"></div>
+                </div>
+                
+                <!-- 呼号字典 -->
+                <div class="tab-content" id="dict-call">
+                    <div class="import-area">
+                        <h4>批量导入呼号</h4>
+                        <p class="helper-text">每行输入一个呼号信息，系统会自动去重。例如：<br>BG1XXX<br>BH2YYY<br>BA3ZZZ</p>
+                        <textarea id="import-call" placeholder="在此输入要导入的呼号列表，每行一个..."></textarea>
+                        <button class="btn btn-primary" onclick="importDict('call')">
+                            <i class="fas fa-upload"></i> 导入
+                        </button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>添加/编辑呼号</label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="edit-call" placeholder="输入呼号" style="text-transform: uppercase;">
+                            <button class="btn btn-primary" onclick="addDictItem('call')">添加</button>
+                            <button class="btn btn-outline" onclick="updateDictItem('call')" id="update-call-btn" disabled>更新</button>
+                        </div>
+                    </div>
+                    
+                        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+                            <button class="btn btn-outline btn-sm" onclick="toggleCallMapEditor()">
+                                <i class="fas fa-map"></i> 管理呼号映射
+                            </button>
+                        </div>
+                        <div class="tag-container" id="call-tags"></div>
+                        <div id="callmap-editor" style="display:none; margin-top:10px;">
+                            <p class="helper-text">编辑呼号映射。每行一条，格式：CALL[TAB]QTH|RIG|PWR|ANT|REM（REM 可留空）。</p>
+                            <textarea id="callmap-text" style="width:100%; height:120px; font-family:monospace;"></textarea>
+                            <div style="margin-top:8px; display:flex; gap:8px;">
+                                <button class="btn btn-primary" onclick="saveCallMapEditor()">保存映射</button>
+                                <button class="btn btn-outline" onclick="toggleCallMapEditor(true)">关闭</button>
+                            </div>
+                            <hr style="margin:12px 0;">
+                            <div id="callmap-list"></div>
+                        </div>
+                </div>
+                
+                <!-- 日志数据 -->
+                <div class="tab-content" id="log-data">
+                    <h4>日志数据管理</h4>
+                    <p class="helper-text">这里可以查看和管理所有日志记录</p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <button class="btn btn-danger" onclick="confirmClearLogs()">
+                            <i class="fas fa-trash"></i> 清空所有日志
+                        </button>
+                        <button class="btn btn-success" style="margin-left: 10px;" onclick="exportExcel()">
+                            <i class="fas fa-file-excel"></i> 导出日志为Excel
+                        </button>
+                    </div>
+                    
+                    <div class="table-wrap">
+                        <table class="dict-editor">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>时间</th>
+                                    <th>呼号</th>
+                                    <th>信号</th>
+                                    <th>位置</th>
+                                    <th>设备</th>
+                                    <th>功率</th>
+                                    <th>天线</th>
+                                    <th>备注</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="log-data-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 数据存储结构
+        let logs = [];
+        let dicts = {
+            qth: [],
+            rig: [],
+            pwr: [],
+            ant: [],
+            op: [],
+            net: [],
+            call: []
+        };
+        // 呼号到多套信息的映射：{ CALL: [ {qth,rig,pwr,ant,rem}, ... ] }
+        let callMap = {};
+        let currentEditIndex = -1;
+        let currentDictEdit = { type: '', index: -1 };
+        // 存储每个输入框的当前建议索引
+        let suggestionIndexes = {
+            qth: -1,
+            rig: -1,
+            pwr: -1,
+            ant: -1,
+            op: -1,
+            net: -1,
+            call: -1
+        };
+
+        // DOM 加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            
+            // 设置默认日期为今天
+            const today = new Date();
+            document.getElementById('inp-date').value = today.toISOString().split('T')[0];
+            
+            // 实时更新时间
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            
+            // 初始化标签切换功能
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 移除所有活动状态
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // 设置当前活动状态
+                    btn.classList.add('active');
+                    const tabId = btn.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+
+            // 点击页面其他区域关闭提示框
+            document.addEventListener('click', (e) => {
+                const inputGroups = document.querySelectorAll('.input-group input');
+                const suggestionBoxes = document.querySelectorAll('.suggestions');
+                
+                let isClickInside = false;
+                inputGroups.forEach(input => {
+                    if (input.contains(e.target)) isClickInside = true;
+                });
+                
+                suggestionBoxes.forEach(box => {
+                    if (box.contains(e.target)) isClickInside = true;
+                });
+                
+                if (!isClickInside) {
+                    suggestionBoxes.forEach(box => {
+                        box.innerHTML = '';
+                        box.style.display = 'none';
+                    });
+                    // 重置所有建议索引
+                    for (let key in suggestionIndexes) {
+                        suggestionIndexes[key] = -1;
+                    }
+                }
+            });
+        });
+
+        // 初始化应用
+        function initApp() {
+            // 从本地存储加载数据
+            loadData();
+            // 渲染字典标签
+            renderAllDictTags();
+            // 渲染日志表格
+            renderLogTable();
+            // 更新计数显示
+            updateCountDisplay();
+        }
+
+        // 从本地存储加载数据
+        function loadData() {
+            const savedLogs = localStorage.getItem('netLogLogs');
+            const savedDicts = localStorage.getItem('netLogDicts');
+            const savedCallMap = localStorage.getItem('netLogCallMap');
+            
+            if (savedLogs) {
+                try {
+                    logs = JSON.parse(savedLogs);
+                } catch (e) {
+                    console.error('加载日志数据失败:', e);
+                    logs = [];
+                }
+            }
+            
+            if (savedDicts) {
+                try {
+                    const parsedDicts = JSON.parse(savedDicts);
+                    // 合并保存的字典数据，避免丢失新添加的字典类型
+                    for (let key in dicts) {
+                        dicts[key] = parsedDicts[key] || [];
+                    }
+                } catch (e) {
+                    console.error('加载字典数据失败:', e);
+                }
+            }
+            if (savedCallMap) {
+                try {
+                    callMap = JSON.parse(savedCallMap) || {};
+                } catch (e) {
+                    console.error('加载呼号映射失败:', e);
+                    callMap = {};
+                }
+            }
+        }
+
+        // 保存数据到本地存储
+        function saveData() {
+            localStorage.setItem('netLogLogs', JSON.stringify(logs));
+            localStorage.setItem('netLogDicts', JSON.stringify(dicts));
+            localStorage.setItem('netLogCallMap', JSON.stringify(callMap));
+        }
+
+        // 更新当前时间
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('inp-time').value = `${hours}:${minutes}:${seconds}`;
+        }
+
+        // 搜索字典并显示建议
+        function searchDict(type, value) {
+            if (!value.trim()) {
+                document.getElementById(`${type}-suggestions`).innerHTML = '';
+                document.getElementById(`${type}-suggestions`).style.display = 'none';
+                suggestionIndexes[type] = -1;
+                return;
+            }
+            
+            const items = dicts[type] || [];
+            let matches = [];
+            
+            // 使用pinyin-match库进行拼音匹配
+            if (pinyinMatch && typeof pinyinMatch.match === 'function') {
+                matches = items.filter(item => {
+                    // 尝试拼音匹配
+                    const pinyinMatchResult = pinyinMatch.match(item, value);
+                    // 如果拼音不匹配，尝试直接文本匹配
+                    const textMatch = item.toLowerCase().includes(value.toLowerCase());
+                    return pinyinMatchResult || textMatch;
+                });
+            } else {
+                // 如果没有拼音库，使用简单的文本匹配和拼音首字母匹配
+                matches = items.filter(item => {
+                    // 文本直接匹配
+                    const textMatch = item.toLowerCase().includes(value.toLowerCase());
+                    if (textMatch) return true;
+                    
+                    // 拼音首字母匹配
+                    return matchPinyinInitials(item, value);
+                });
+            }
+            
+            // 显示匹配结果
+            const suggestionsBox = document.getElementById(`${type}-suggestions`);
+            if (matches.length > 0) {
+                suggestionsBox.innerHTML = '';
+                matches.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = `suggestion-item ${index === 0 ? 'highlighted' : ''}`;
+                    div.textContent = item;
+                    div.addEventListener('click', () => {
+                        document.getElementById(`inp-${type}`).value = item;
+                        suggestionsBox.innerHTML = '';
+                        suggestionsBox.style.display = 'none';
+                        suggestionIndexes[type] = -1;
+                        
+                        // 如果是呼号，选中内容
+                        if (type === 'call') {
+                            selectInputText(`inp-${type}`);
+                        }
+                    });
+                    suggestionsBox.appendChild(div);
+                });
+                suggestionsBox.style.display = 'block';
+                // 默认选中第一个
+                suggestionIndexes[type] = 0;
+            } else {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                suggestionIndexes[type] = -1;
+            }
+        }
+
+        // 拼音首字母匹配 (备用方案)
+        function matchPinyinInitials(chinese, initials) {
+            if (!chinese || !initials) return false;
+            
+            // 简单的拼音首字母映射表，覆盖常用汉字
+            const pinyinMap = {
+                'a': ['啊', '阿', '吖', '呵', '嗄'],
+                'b': ['吧', '把', '爸', '拔', '巴', '白', '百', '柏', '摆', '败', '拜', '班', '般', '颁', '板', '版', '办', '半', '伴', '拌', '帮', '榜', '膀', '绑', '棒', '包', '胞', '宝', '饱', '保', '堡', '报', '抱', '暴', '豹', '备', '背', '贝', '倍', '被', '本', '苯', '奔', '笨', '崩', '绷', '甭', '泵', '蹦', '逼', '鼻', '比', '鄙', '笔', '彼', '碧', '蔽', '毕', '毙', '毖', '币', '庇', '痹', '闭', '必', '辟', '壁', '臂', '避', '陛', '鞭', '边', '编', '贬', '扁', '便', '变', '辨', '辩', '遍', '标', '彪', '膘', '表', '鳖', '憋', '别', '瘪', '宾', '彬', '斌', '濒', '滨', '宾', '兵', '冰', '柄', '丙', '秉', '饼', '炳', '病', '并', '玻', '菠', '播', '拨', '钵', '波', '博', '勃', '搏', '铂', '箔', '伯', '帛', '舶', '脖', '膊', '薄', '簸', '跛', '玻', '泊', '驳', '捕', '卜', '哺', '补', '埠', '不', '布', '步', '簿', '部', '怖'],
+                'c': ['擦', '猜', '裁', '材', '才', '财', '睬', '踩', '采', '彩', '菜', '蔡', '餐', '参', '蚕', '残', '惭', '惨', '灿', '仓', '沧', '舱', '藏', '操', '糙', '槽', '曹', '草', '厕', '策', '侧', '册', '测', '层', '蹭', '插', '叉', '茬', '茶', '查', '碴', '搽', '察', '岔', '差', '诧', '拆', '柴', '豺', '搀', '掺', '蝉', '馋', '缠', '铲', '产', '阐', '颤', '昌', '猖', '场', '尝', '常', '长', '偿', '肠', '厂', '敞', '畅', '唱', '倡', '超', '抄', '钞', '朝', '嘲', '潮', '巢', '吵', '炒', '车', '扯', '撤', '掣', '彻', '澈', '郴', '臣', '辰', '尘', '晨', '忱', '沉', '陈', '趁', '衬', '撑', '称', '城', '橙', '成', '呈', '乘', '程', '惩', '澄', '诚', '承', '逞', '骋', '秤', '吃', '痴', '持', '匙', '池', '迟', '弛', '驰', '耻', '齿', '侈', '尺', '赤', '翅', '斥', '炽', '充', '冲', '虫', '崇', '宠', '抽', '酬', '畴', '踌', '稠', '愁', '筹', '仇', '绸', '瞅', '丑', '臭', '初', '出', '橱', '厨', '躇', '锄', '雏', '滁', '除', '楚', '础', '储', '矗', '搐', '触', '处', '揣', '川', '穿', '椽', '传', '船', '喘', '串', '疮', '窗', '床', '闯', '创', '吹', '炊', '捶', '锤', '垂', '春', '椿', '醇', '唇', '淳', '纯', '蠢', '戳', '绰', '疵', '茨', '磁', '雌', '辞', '慈', '瓷', '词', '此', '刺', '赐', '次', '聪', '葱', '囱', '匆', '从', '丛', '凑', '粗', '醋', '簇', '促', '蹿', '篡', '窜', '摧', '崔', '催', '脆', '瘁', '粹', '淬', '翠', '村', '存', '寸', '磋', '撮', '搓', '措', '错', '挫'],
+                'd': ['搭', '达', '答', '瘩', '打', '大', '呆', '歹', '傣', '戴', '带', '殆', '代', '贷', '袋', '待', '逮', '怠', '耽', '担', '丹', '单', '郸', '掸', '胆', '旦', '氮', '但', '惮', '淡', '诞', '弹', '蛋', '当', '挡', '党', '荡', '档', '刀', '捣', '蹈', '倒', '岛', '祷', '导', '到', '稻', '悼', '道', '盗', '德', '得', '的', '蹬', '灯', '登', '等', '瞪', '凳', '邓', '堤', '低', '滴', '迪', '敌', '笛', '狄', '涤', '翟', '嫡', '抵', '底', '地', '蒂', '第', '帝', '弟', '递', '缔', '颠', '掂', '滇', '碘', '点', '典', '电', '佃', '甸', '店', '惦', '奠', '淀', '殿', '碉', '叼', '雕', '凋', '刁', '掉', '吊', '钓', '调', '跌', '爹', '碟', '蝶', '迭', '谍', '叠', '丁', '盯', '叮', '钉', '顶', '鼎', '锭', '定', '订', '丢', '东', '冬', '董', '懂', '动', '栋', '侗', '恫', '冻', '洞', '都', '兜', '抖', '斗', '陡', '豆', '逗', '痘', '都督', '毒', '犊', '独', '读', '堵', '睹', '赌', '杜', '镀', '肚', '度', '渡', '妒', '端', '短', '锻', '段', '断', '缎', '堆', '兑', '队', '对', '墩', '吨', '蹲', '敦', '顿', '囤', '钝', '盾', '遁', '掇', '哆', '多', '夺', '垛', '躲', '朵', '跺', '舵', '剁', '惰', '堕'],
+                'e': ['蛾', '峨', '鹅', '俄', '额', '讹', '娥', '恶', '厄', '扼', '遏', '鄂', '饿', '噩', '鳄', '恩', '而', '儿', '耳', '尔', '饵', '洱', '二', '贰'],
+                'f': ['发', '罚', '筏', '伐', '乏', '阀', '法', '珐', '藩', '帆', '番', '翻', '樊', '矾', '钒', '繁', '凡', '烦', '反', '返', '范', '贩', '犯', '饭', '泛', '坊', '芳', '方', '肪', '房', '防', '妨', '仿', '访', '纺', '放', '菲', '非', '啡', '飞', '肥', '匪', '诽', '吠', '肺', '废', '沸', '费', '芬', '酚', '吩', '氛', '分', '纷', '坟', '焚', '汾', '粉', '奋', '愤', '粪', '丰', '封', '枫', '蜂', '峰', '锋', '风', '疯', '烽', '逢', '冯', '缝', '讽', '奉', '凤', '佛', '否', '夫', '敷', '肤', '孵', '扶', '拂', '辐', '幅', '氟', '符', '伏', '俘', '服', '浮', '涪', '福', '袱', '弗', '甫', '辅', '俯', '釜', '斧', '脯', '腑', '府', '腐', '赴', '副', '覆', '赋', '复', '傅', '付', '阜', '父', '腹', '负', '富', '讣', '附', '妇', '缚'],
+                'g': ['噶', '嘎', '该', '改', '概', '钙', '盖', '溉', '干', '甘', '杆', '柑', '竿', '肝', '赶', '感', '秆', '敢', '赣', '冈', '刚', '钢', '缸', '肛', '纲', '岗', '港', '杠', '篙', '皋', '高', '膏', '羔', '糕', '搞', '镐', '稿', '告', '哥', '歌', '搁', '戈', '鸽', '胳', '疙', '割', '革', '葛', '格', '蛤', '阁', '隔', '个', '各', '给', '根', '跟', '耕', '更', '庚', '羹', '埂', '耿', '梗', '工', '攻', '功', '恭', '龚', '供', '躬', '公', '宫', '弓', '巩', '汞', '拱', '贡', '共', '钩', '勾', '沟', '苟', '狗', '垢', '构', '购', '够', '辜', '菇', '咕', '箍', '估', '沽', '孤', '姑', '鼓', '古', '蛊', '骨', '谷', '股', '故', '顾', '固', '雇', '刮', '瓜', '剐', '寡', '挂', '褂', '乖', '拐', '怪', '棺', '关', '官', '冠', '观', '管', '馆', '罐', '惯', '灌', '贯', '光', '广', '逛', '瑰', '规', '圭', '硅', '归', '龟', '闺', '轨', '鬼', '诡', '癸', '桂', '柜', '跪', '贵', '刽', '辊', '滚', '棍', '锅', '郭', '国', '果', '裹', '过'],
+                'h': ['哈', '骸', '孩', '海', '氦', '亥', '害', '骇', '酣', '憨', '邯', '韩', '含', '涵', '寒', '函', '喊', '罕', '翰', '撼', '捍', '旱', '憾', '悍', '焊', '汗', '夯', '杭', '航', '壕', '嚎', '豪', '毫', '郝', '好', '耗', '号', '浩', '呵', '喝', '荷', '菏', '核', '禾', '和', '何', '合', '盒', '貉', '阂', '河', '涸', '赫', '褐', '鹤', '贺', '嘿', '黑', '痕', '很', '狠', '恨', '哼', '亨', '横', '衡', '恒', '轰', '哄', '烘', '虹', '鸿', '洪', '宏', '弘', '红', '喉', '侯', '猴', '吼', '厚', '候', '后', '呼', '乎', '忽', '瑚', '壶', '葫', '胡', '蝴', '狐', '糊', '湖', '弧', '虎', '唬', '护', '互', '沪', '户', '花', '哗', '华', '猾', '滑', '画', '划', '化', '话', '槐', '徊', '怀', '淮', '坏', '欢', '环', '桓', '还', '缓', '换', '患', '唤', '痪', '豢', '焕', '涣', '宦', '幻', '荒', '慌', '黄', '磺', '蝗', '簧', '皇', '凰', '惶', '煌', '晃', '幌', '恍', '谎', '灰', '挥', '辉', '徽', '恢', '蛔', '回', '毁', '悔', '慧', '卉', '惠', '晦', '贿', '秽', '会', '烩', '汇', '讳', '诲', '绘', '荤', '昏', '婚', '魂', '浑', '混', '豁', '活', '火', '伙', '或', '惑', '霍', '货', '祸'],
+                'j': ['击', '圾', '基', '机', '畸', '稽', '积', '箕', '肌', '饥', '迹', '激', '讥', '鸡', '姬', '绩', '缉', '吉', '极', '棘', '辑', '籍', '集', '及', '急', '疾', '汲', '即', '嫉', '级', '挤', '几', '脊', '己', '蓟', '技', '冀', '季', '伎', '祭', '剂', '悸', '济', '寄', '寂', '计', '记', '既', '忌', '际', '妓', '继', '纪', '嘉', '枷', '夹', '佳', '家', '加', '荚', '颊', '贾', '甲', '钾', '假', '稼', '价', '架', '驾', '嫁', '歼', '监', '坚', '尖', '笺', '间', '煎', '兼', '肩', '艰', '奸', '缄', '茧', '检', '柬', '碱', '拣', '捡', '简', '俭', '剪', '减', '荐', '槛', '鉴', '践', '贱', '见', '键', '箭', '件', '健', '舰', '剑', '饯', '渐', '溅', '涧', '建', '僵', '姜', '将', '浆', '江', '疆', '蒋', '桨', '奖', '讲', '匠', '酱', '降', '蕉', '椒', '礁', '焦', '胶', '交', '郊', '浇', '骄', '娇', '嚼', '搅', '铰', '矫', '侥', '脚', '狡', '角', '饺', '缴', '绞', '剿', '教', '酵', '轿', '较', '叫', '窖', '揭', '接', '皆', '秸', '街', '阶', '截', '劫', '节', '桔', '杰', '捷', '睫', '竭', '洁', '结', '解', '姐', '戒', '藉', '芥', '界', '疥', '诫', '届', '巾', '筋', '斤', '金', '今', '津', '襟', '紧', '锦', '仅', '谨', '进', '靳', '晋', '禁', '近', '烬', '浸', '尽', '劲', '荆', '兢', '茎', '睛', '晶', '鲸', '京', '惊', '精', '粳', '经', '井', '警', '景', '颈', '静', '境', '敬', '镜', '径', '痉', '靖', '竟', '竞', '净', '炯', '窘', '揪', '究', '纠', '玖', '韭', '久', '灸', '九', '酒', '厩', '旧', '臼', '咎', '救', '就', '舅', '拘', '狙', '疽', '居', '驹', '菊', '局', '咀', '矩', '举', '沮', '聚', '拒', '据', '巨', '具', '距', '锯', '俱', '句', '惧', '炬', '剧', '捐', '鹃', '娟', '倦', '眷', '卷', '绢', '撅', '攫', '抉', '掘', '倔', '爵', '觉', '决', '诀', '绝', '均', '菌', '钧', '军', '君', '峻', '俊', '竣', '浚', '郡', '骏'],
+                'k': ['喀', '咖', '卡', '咯', '开', '揩', '楷', '凯', '慨', '刊', '堪', '勘', '坎', '砍', '看', '康', '慷', '糠', '扛', '抗', '亢', '炕', '考', '拷', '烤', '靠', '坷', '苛', '柯', '棵', '磕', '颗', '科', '壳', '咳', '可', '渴', '克', '刻', '客', '恪', '肯', '啃', '垦', '恳', '坑', '吭', '空', '恐', '孔', '控', '抠', '口', '扣', '寇', '枯', '哭', '窟', '苦', '酷', '库', '裤', '夸', '垮', '挎', '跨', '胯', '块', '筷', '侩', '快', '宽', '款', '匡', '筐', '狂', '框', '矿', '眶', '旷', '况', '亏', '盔', '岿', '窥', '葵', '奎', '魁', '傀', '馈', '愧', '溃', '坤', '昆', '捆', '困', '括', '扩', '廓', '阔'],
+                'l': ['垃', '拉', '喇', '蜡', '辣', '啦', '莱', '来', '赖', '蓝', '婪', '栏', '拦', '篮', '阑', '兰', '澜', '谰', '揽', '览', '懒', '缆', '烂', '滥', '琅', '榔', '狼', '廊', '郎', '朗', '浪', '捞', '劳', '牢', '老', '佬', '姥', '酪', '烙', '涝', '勒', '乐', '雷', '镭', '蕾', '磊', '累', '儡', '垒', '擂', '肋', '类', '泪', '棱', '楞', '冷', '厘', '梨', '犁', '黎', '篱', '离', '漓', '理', '李', '里', '鲤', '礼', '莉', '荔', '吏', '栗', '丽', '厉', '励', '砾', '历', '利', '例', '俐', '痢', '立', '粒', '沥', '隶', '力', '璃', '哩', '俩', '联', '莲', '连', '镰', '廉', '怜', '涟', '帘', '敛', '脸', '链', '恋', '炼', '练', '粮', '凉', '梁', '粱', '良', '两', '辆', '量', '晾', '亮', '谅', '撩', '聊', '僚', '疗', '燎', '寥', '辽', '了', '撂', '料', '列', '裂', '烈', '劣', '猎', '琳', '林', '磷', '霖', '临', '邻', '鳞', '淋', '凛', '赁', '吝', '拎', '玲', '菱', '零', '龄', '铃', '伶', '灵', '凌', '陵', '羚', '绫', '领', '另', '令', '溜', '琉', '硫', '流', '留', '柳', '六', '龙', '聋', '咙', '笼', '窿', '隆', '垄', '拢', '陇', '楼', '娄', '搂', '篓', '漏', '陋', '芦', '卢', '颅', '庐', '炉', '掳', '卤', '虏', '鲁', '麓', '碌', '露', '路', '赂', '鹿', '潞', '禄', '录', '陆', '戮', '驴', '吕', '铝', '侣', '旅', '履', '屡', '缕', '虑', '氯', '律', '率', '绿', '峦', '挛', '孪', '滦', '卵', '乱', '掠', '略', '抡', '轮', '伦', '仑', '沦', '纶', '论', '萝', '螺', '罗', '逻', '锣', '箩', '骡', '裸', '落', '洛', '骆', '络'],
+                'm': ['妈', '麻', '玛', '码', '蚂', '马', '骂', '嘛', '吗', '埋', '买', '麦', '卖', '迈', '脉', '瞒', '馒', '蛮', '满', '蔓', '曼', '慢', '漫', '芒', '茫', '盲', '氓', '忙', '莽', '猫', '毛', '矛', '茅', '锚', '卯', '茂', '冒', '帽', '貌', '贸', '么', '玫', '枚', '梅', '酶', '霉', '煤', '没', '眉', '媒', '镁', '每', '美', '昧', '寐', '妹', '媚', '门', '闷', '们', '萌', '蒙', '檬', '盟', '锰', '猛', '梦', '孟', '眯', '醚', '靡', '迷', '谜', '弥', '米', '秘', '觅', '泌', '蜜', '密', '幂', '棉', '眠', '绵', '冕', '免', '勉', '娩', '缅', '面', '苗', '描', '瞄', '藐', '秒', '渺', '庙', '妙', '蔑', '灭', '民', '抿', '皿', '敏', '悯', '闽', '明', '螟', '鸣', '铭', '名', '命', '谬', '摸', '摹', '蘑', '模', '膜', '磨', '摩', '魔', '抹', '末', '莫', '墨', '默', '沫', '漠', '寞', '陌', '谋', '牟', '某', '拇', '牡', '亩', '姆', '母', '墓', '暮', '幕', '穆', '拿', '哪', '呐', '钠', '那', '娜', '纳', '氖', '乃', '奶', '耐', '奈', '南', '男', '难', '囊', '挠', '脑', '恼', '闹', '淖', '呢', '馁', '内', '嫩', '能', '妮', '霓', '倪', '泥', '尼', '拟', '你', '匿', '腻', '逆', '溺', '蔫', '拈', '年', '碾', '撵', '捻', '念', '娘', '酿', '鸟', '尿', '捏', '聂', '孽', '啮', '镊', '镍', '涅', '您', '柠', '狞', '凝', '宁', '拧', '泞', '牛', '扭', '钮', '纽', '脓', '浓', '农', '弄', '奴', '努', '怒', '女', '暖', '虐', '疟', '挪', '懦', '糯', '诺'],
+                'n': ['拿', '哪', '呐', '钠', '那', '娜', '纳', '氖', '乃', '奶', '耐', '奈', '南', '男', '难', '囊', '挠', '脑', '恼', '闹', '淖', '呢', '馁', '内', '嫩', '能', '妮', '霓', '倪', '泥', '尼', '拟', '你', '匿', '腻', '逆', '溺', '蔫', '拈', '年', '碾', '撵', '捻', '念', '娘', '酿', '鸟', '尿', '捏', '聂', '孽', '啮', '镊', '镍', '涅', '您', '柠', '狞', '凝', '宁', '拧', '泞', '牛', '扭', '钮', '纽', '脓', '浓', '农', '弄', '奴', '努', '怒', '女', '暖', '虐', '疟', '挪', '懦', '糯', '诺'],
+                'o': ['哦', '喔', '鸥', '欧', '殴', '藕', '呕', '偶', '沤', '啪', '趴', '爬', '帕', '怕', '琶'],
+                'p': ['啪', '趴', '爬', '帕', '怕', '琶', '拍', '排', '牌', '徘', '湃', '派', '攀', '潘', '盘', '磐', '盼', '畔', '判', '叛', '乓', '庞', '旁', '磅', '乓', '庞', '旁', '磅', '膀', '抛', '咆', '刨', '炮', '袍', '跑', '泡', '呸', '胚', '培', '裴', '赔', '陪', '配', '佩', '沛', '喷', '盆', '砰', '抨', '烹', '澎', '彭', '蓬', '棚', '硼', '篷', '膨', '朋', '鹏', '捧', '碰', '坯', '砒', '霹', '批', '披', '劈', '琵', '毗', '啤', '脾', '疲', '皮', '匹', '痞', '僻', '屁', '譬', '篇', '偏', '片', '骗', '飘', '漂', '瓢', '票', '撇', '瞥', '拼', '频', '贫', '品', '聘', '乒', '坪', '苹', '萍', '平', '凭', '瓶', '评', '屏', '坡', '泼', '颇', '婆', '破', '魄', '迫', '粕', '剖', '扑', '铺', '仆', '莆', '葡', '菩', '蒲', '埔', '朴', '圃', '普', '浦', '谱', '曝', '瀑'],
+                'q': ['栖', '戚', '妻', '七', '凄', '漆', '柒', '沏', '其', '棋', '奇', '歧', '畦', '崎', '脐', '齐', '旗', '祈', '祁', '骑', '起', '岂', '乞', '企', '启', '契', '砌', '器', '气', '迄', '弃', '汽', '泣', '掐', '恰', '洽', '牵', '扦', '钎', '铅', '千', '迁', '签', '仟', '谦', '乾', '黔', '钱', '钳', '前', '潜', '遣', '浅', '谴', '堑', '嵌', '欠', '歉', '枪', '呛', '腔', '羌', '墙', '蔷', '强', '抢', '橇', '锹', '敲', '悄', '桥', '瞧', '乔', '侨', '巧', '鞘', '撬', '翘', '峭', '俏', '窍', '切', '茄', '且', '怯', '窃', '钦', '侵', '亲', '秦', '琴', '勤', '芹', '擒', '禽', '寝', '沁', '青', '轻', '氢', '倾', '卿', '清', '擎', '晴', '氰', '情', '顷', '请', '庆', '琼', '穷', '秋', '丘', '邱', '球', '求', '囚', '酋', '泅', '趋', '区', '蛆', '曲', '躯', '屈', '驱', '渠', '取', '娶', '龋', '趣', '去', '圈', '颧', '权', '醛', '泉', '全', '痊', '拳', '犬', '券', '劝', '缺', '炔', '瘸', '却', '鹊', '榷', '确', '雀', '裙', '群'],
+                'r': ['然', '燃', '冉', '染', '瓤', '壤', '攘', '嚷', '让', '饶', '扰', '绕', '惹', '热', '壬', '仁', '人', '忍', '韧', '任', '认', '刃', '妊', '纫', '扔', '仍', '日', '戎', '茸', '蓉', '荣', '融', '熔', '溶', '容', '绒', '冗', '揉', '柔', '肉', '茹', '儒', '孺', '如', '辱', '乳', '汝', '入', '褥', '软', '阮', '蕊', '瑞', '锐', '闰', '润', '若', '弱'],
+                's': ['撒', '洒', '萨', '腮', '鳃', '塞', '赛', '三', '叁', '伞', '散', '桑', '嗓', '丧', '搔', '骚', '扫', '嫂', '瑟', '色', '涩', '森', '僧', '莎', '砂', '杀', '刹', '沙', '纱', '傻', '啥', '煞', '筛', '晒', '珊', '苫', '杉', '山', '删', '煽', '衫', '闪', '陕', '擅', '赡', '膳', '善', '汕', '扇', '缮', '墒', '伤', '商', '赏', '晌', '上', '尚', '裳', '梢', '捎', '稍', '烧', '芍', '勺', '韶', '少', '哨', '邵', '绍', '奢', '赊', '蛇', '舌', '舍', '赦', '摄', '射', '慑', '涉', '社', '设', '砷', '申', '呻', '伸', '身', '深', '娠', '绅', '神', '沈', '审', '婶', '甚', '肾', '慎', '渗', '声', '生', '甥', '牲', '升', '绳', '省', '盛', '剩', '胜', '圣', '师', '失', '狮', '施', '湿', '诗', '尸', '虱', '十', '石', '拾', '时', '什', '食', '蚀', '实', '识', '史', '矢', '使', '驶', '始', '屎', '士', '氏', '世', '仕', '市', '示', '式', '事', '侍', '势', '视', '试', '饰', '室', '是', '嗜', '适', '仕', '侍', '释', '逝', '誓', '噬', '收', '搜', '艘', '擞', '嗽', '苏', '酥', '俗', '素', '速', '粟', '僳', '塑', '溯', '宿', '诉', '肃', '酸', '蒜', '算', '虽', '隋', '随', '绥', '髓', '碎', '岁', '穗', '遂', '隧', '祟', '孙', '损', '笋', '蓑', '梭', '唆', '缩', '琐', '索', '锁'],
+                't': ['塌', '他', '它', '她', '塔', '獭', '挞', '蹋', '踏', '胎', '苔', '抬', '台', '泰', '酞', '太', '态', '汰', '坍', '摊', '贪', '瘫', '滩', '坛', '檀', '痰', '潭', '谭', '谈', '坦', '毯', '袒', '碳', '探', '叹', '炭', '汤', '塘', '搪', '堂', '棠', '膛', '唐', '糖', '倘', '躺', '淌', '烫', '掏', '涛', '滔', '绦', '萄', '桃', '逃', '淘', '陶', '讨', '套', '特', '藤', '腾', '疼', '誊', '梯', '剔', '踢', '锑', '提', '题', '蹄', '啼', '体', '替', '嚏', '惕', '涕', '剃', '屉', '天', '添', '填', '田', '甜', '恬', '舔', '腆', '挑', '条', '迢', '眺', '跳', '贴', '铁', '帖', '厅', '听', '烃', '汀', '廷', '停', '亭', '庭', '挺', '艇', '通', '桐', '酮', '瞳', '同', '铜', '彤', '童', '桶', '捅', '筒', '统', '痛', '偷', '投', '头', '透', '凸', '秃', '突', '图', '徒', '途', '涂', '屠', '土', '吐', '兔', '湍', '团', '推', '颓', '腿', '蜕', '褪', '退', '吞', '屯', '臀', '拖', '托', '脱', '鸵', '陀', '驮', '驼', '椭', '妥', '拓', '唾'],
+                'w': ['挖', '哇', '蛙', '洼', '瓦', '袜', '歪', '外', '豌', '弯', '湾', '玩', '顽', '丸', '烷', '完', '碗', '挽', '晚', '皖', '惋', '婉', '万', '腕', '汪', '王', '亡', '枉', '网', '往', '旺', '望', '忘', '妄', '威', '巍', '微', '危', '韦', '违', '桅', '围', '唯', '惟', '为', '潍', '维', '苇', '萎', '委', '伟', '伪', '尾', '纬', '未', '蔚', '味', '畏', '胃', '喂', '魏', '位', '渭', '谓', '尉', '慰', '卫', '瘟', '温', '文', '纹', '闻', '蚊', '吻', '稳', '紊', '问', '嗡', '翁', '瓮', '挝', '蜗', '涡', '窝', '我', '斡', '卧', '握', '沃', '巫', '呜', '钨', '乌', '污', '诬', '屋', '无', '芜', '梧', '吾', '吴', '毋', '武', '五', '捂', '午', '舞', '伍', '侮', '坞', '戊', '雾', '晤', '物', '勿', '务', '悟', '误'],
+                'x': ['夕', '汐', '西', '希', '稀', '息', '悉', '膝', '惜', '昔', '析', '溪', '汐', '锡', '熄', '希', '稀', '息', '悉', '膝', '惜', '昔', '析', '溪', '汐', '锡', '熄', '喜', '洗', '系', '隙', '戏', '细', '瞎', '虾', '匣', '霞', '辖', '暇', '峡', '侠', '狭', '下', '厦', '夏', '吓', '掀', '锨', '先', '仙', '鲜', '纤', '咸', '贤', '衔', '舷', '闲', '涎', '弦', '嫌', '显', '险', '现', '献', '县', '腺', '馅', '羡', '宪', '陷', '限', '线', '相', '厢', '镶', '香', '箱', '襄', '湘', '乡', '翔', '祥', '详', '想', '响', '享', '项', '巷', '橡', '像', '向', '象', '萧', '硝', '霄', '削', '哮', '嚣', '销', '消', '宵', '淆', '晓', '小', '孝', '校', '肖', '啸', '笑', '效', '楔', '些', '歇', '蝎', '鞋', '协', '挟', '携', '邪', '斜', '胁', '谐', '写', '械', '卸', '蟹', '懈', '泄泻', '谢', '屑', '薪', '芯', '辛', '锌', '欣', '新', '忻', '心', '信', '衅', '星', '腥', '猩', '惺', '兴', '刑', '型', '形', '邢', '行', '醒', '幸', '杏', '性', '姓', '兄', '凶', '胸', '匈', '汹', '雄', '熊', '休', '修', '羞', '朽', '嗅', '锈', '秀', '袖', '绣', '墟', '戌', '需', '虚', '嘘', '须', '徐', '许', '蓄', '酗', '叙', '旭', '序', '畜', '恤', '絮', '婿', '绪', '续', '轩', '喧', '宣', '悬', '旋', '玄', '选', '癣', '眩', '绚', '靴', '薛', '学', '穴', '雪', '血', '勋', '熏', '循', '旬', '询', '寻', '驯', '巡', '殉', '汛', '训', '讯', '逊', '迅'],
+                'y': ['压', '押', '鸦', '鸭', '呀', '丫', '芽', '牙', '蚜', '崖', '衙', '涯', '雅', '哑', '亚', '讶', '焉', '咽', '阉', '烟', '淹', '盐', '严', '研', '蜒', '岩', '延', '言', '颜', '阎', '炎', '沿', '奄', '掩', '眼', '衍', '演', '艳', '堰', '燕', '厌', '砚', '雁', '唁', '彦', '焰', '宴', '谚', '验', '殃', '央', '鸯', '秧', '杨', '扬', '佯', '疡', '羊', '洋', '阳', '氧', '仰', '养', '痒', '样', '漾', '幺', '妖', '瑶', '摇', '尧', '遥', '姚', '咬', '舀', '药', '要', '耀', '椰', '噎', '耶', '爷', '野', '冶', '也', '页', '掖', '业', '叶', '曳', '腋', '夜', '液', '一', '壹', '医', '揖', '铱', '依', '伊', '衣', '颐', '夷', '遗', '移', '仪', '胰', '疑', '沂', '宜', '姨', '彝', '椅', '蚁', '倚', '已', '乙', '矣', '以', '艺', '抑', '易', '邑', '屹', '亿', '役', '臆', '逸', '肄', '疫', '亦', '裔', '意', '毅', '忆', '义', '益', '溢', '诣', '议', '谊', '译', '异', '翼', '翌', '绎', '茵', '荫', '因', '殷', '音', '阴', '姻', '吟', '银', '淫', '寅', '饮', '尹', '引', '隐', '印', '英', '樱', '婴', '鹰', '应', '缨', '莹', '萤', '营', '荧', '蝇', '迎', '赢', '盈', '影', '颖', '硬', '映', '哟', '拥', '佣', '臃', '痈', '庸', '雍', '踊', '蛹', '咏', '泳', '涌', '永', '恿', '勇', '用', '幽', '优', '悠', '忧', '尤', '由', '邮', '铀', '犹', '油', '游', '酉', '有', '友', '右', '佑', '釉', '诱', '又', '幼', '迂', '淤', '于', '盂', '榆', '虞', '愚', '舆', '余', '俞', '逾', '鱼', '愉', '渝', '渔', '隅', '予', '娱', '雨', '与', '宇', '屿', '羽', '语', '玉', '域', '芋', '郁', '育', '誉', '浴', '寓', '裕', '预', '豫', '驭', '愈', '欲', '喻', '峪', '遇', '御', '愈', '欲', '喻', '峪', '遇', '御', '鹆', '冤', '元', '垣', '袁', '原', '援', '辕', '园', '员', '圆', '猿', '源', '缘', '远', '苑', '愿', '怨', '院', '曰', '约', '越', '跃', '钥', '岳', '粤', '月', '悦', '阅', '耘', '云', '郧', '匀', '陨', '允', '运', '蕴', '酝', '晕', '韵', '孕'],
+                'z': ['匝', '砸', '杂', '栽', '哉', '灾', '宰', '载', '再', '在', '咱', '攒', '暂', '赞', '赃', '脏', '葬', '遭', '糟', '凿', '藻', '枣', '早', '澡', '蚤', '躁', '噪', '造', '皂', '灶', '则', '泽', '责', '择', '咋', '憎', '曾', '赠', '扎', '喳', '渣', '札', '轧', '铡', '闸', '眨', '栅', '榨', '咋', '乍', '炸', '诈', '摘', '斋', '宅', '窄', '债', '寨', '瞻', '毡', '詹', '粘', '沾', '盏', '斩', '辗', '崭', '展', '蘸', '栈', '占', '战', '站', '湛', '绽', '樟', '章', '彰', '漳', '张', '掌', '涨', '杖', '丈', '帐', '账', '仗', '胀', '瘴', '招', '昭', '找', '沼', '赵', '照', '罩', '兆', '肇', '召', '遮', '折', '哲', '蛰', '辙', '者', '锗', '蔗', '这', '浙', '珍', '斟', '真', '甄', '砧', '臻', '贞', '针', '侦', '枕', '疹', '诊', '震', '振', '镇', '阵', '蒸', '挣', '睁', '征', '狰', '争', '怔', '整', '拯', '正', '政', '症', '郑', '证', '芝', '枝', '支', '吱', '蜘', '知', '肢', '脂', '汁', '织', '职', '直', '植', '殖', '执', '值', '侄', '址', '指', '止', '只', '旨', '纸', '志', '挚', '掷', '至', '致', '置', '帜', '峙', '制', '智', '秩', '稚', '质', '炙', '痔', '滞', '治', '窒', '中', '盅', '忠', '钟', '衷', '终', '种', '肿', '重', '仲', '众', '舟', '周', '州', '洲', '诌', '粥', '轴', '肘', '帚', '咒', '皱', '宙', '昼', '骤', '珠', '株', '蛛', '朱', '猪', '诸', '诛', '逐', '竹', '烛', '煮', '拄', '瞩', '嘱', '主', '著', '柱', '助', '蛀', '贮', '铸', '筑', '住', '注', '祝', '驻', '抓', '爪', '拽', '专', '砖', '转', '撰', '赚', '篆', '桩', '庄', '装', '妆', '撞', '壮', '状', '椎', '锥', '追', '赘', '坠', '缀', '谆', '准', '捉', '拙', '卓', '桌', '琢', '茁', '酌', '啄', '着', '灼', '浊', '兹', '咨', '资', '姿', '滋', '淄', '孜', '紫', '仔', '籽', '滓', '子', '自', '渍', '字', '鬃', '棕', '踪', '宗', '综', '总', '纵', '邹', '走', '奏', '揍', '租', '足', '卒', '族', '祖', '诅', '阻', '组', '钻', '纂', '嘴', '醉', '最', '罪', '尊', '遵', '樽', '昨', '左', '佐', '柞', '做', '作', '坐', '座']
+            };
+            
+            initials = initials.toLowerCase();
+            let initialIndex = 0;
+            
+            // 逐个字符检查是否匹配拼音首字母
+            for (let i = 0; i < chinese.length && initialIndex < initials.length; i++) {
+                const char = chinese[i];
+                const targetInitial = initials[initialIndex];
+                
+                // 检查字符是否匹配目标首字母
+                if (pinyinMap[targetInitial] && pinyinMap[targetInitial].includes(char)) {
+                    initialIndex++;
+                }
+            }
+            
+            return initialIndex === initials.length;
+        }
+
+        // 处理输入框按键事件
+        function handleInputKeydown(event, dictType, nextFieldId) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (nextFieldId) {
+                    document.getElementById(nextFieldId).focus();
+                }
+            }
+        }
+
+        // 处理带建议的输入框按键事件
+        function handleSuggestionKeydown(event, dictType, nextFieldId) {
+            const suggestionsBox = document.getElementById(`${dictType}-suggestions`);
+            const suggestions = suggestionsBox.querySelectorAll('.suggestion-item');
+            const inputElement = document.getElementById(`inp-${dictType}`);
+            
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (suggestions.length > 0) {
+                    // 移除上一个选中项的高亮
+                    if (suggestionIndexes[dictType] >= 0) {
+                        suggestions[suggestionIndexes[dictType]].classList.remove('highlighted');
+                    }
+                    // 计算下一个索引
+                    suggestionIndexes[dictType] = (suggestionIndexes[dictType] + 1) % suggestions.length;
+                    // 添加高亮
+                    suggestions[suggestionIndexes[dictType]].classList.add('highlighted');
+                    // 滚动到可见
+                    suggestions[suggestionIndexes[dictType]].scrollIntoView({ block: 'nearest' });
+                }
+            } 
+            else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (suggestions.length > 0) {
+                    // 移除上一个选中项的高亮
+                    if (suggestionIndexes[dictType] >= 0) {
+                        suggestions[suggestionIndexes[dictType]].classList.remove('highlighted');
+                    }
+                    // 计算上一个索引
+                    suggestionIndexes[dictType] = (suggestionIndexes[dictType] - 1 + suggestions.length) % suggestions.length;
+                    // 添加高亮
+                    suggestions[suggestionIndexes[dictType]].classList.add('highlighted');
+                    // 滚动到可见
+                    suggestions[suggestionIndexes[dictType]].scrollIntoView({ block: 'nearest' });
+                }
+            }
+            else if (event.key === 'Tab') {
+                event.preventDefault();
+                if (suggestions.length > 0 && suggestionIndexes[dictType] >= 0) {
+                    // 填充选中的建议
+                    inputElement.value = suggestions[suggestionIndexes[dictType]].textContent;
+                    // 清空建议框
+                    suggestionsBox.innerHTML = '';
+                    suggestionsBox.style.display = 'none';
+                    suggestionIndexes[dictType] = -1;
+                }
+                // 聚焦到下一个字段
+                if (nextFieldId) {
+                    document.getElementById(nextFieldId).focus();
+                }
+            }
+            else if (event.key === 'Enter') {
+                event.preventDefault();
+                // 如果有选中的建议，先填充
+                if (suggestions.length > 0 && suggestionIndexes[dictType] >= 0) {
+                    inputElement.value = suggestions[suggestionIndexes[dictType]].textContent;
+                    suggestionsBox.innerHTML = '';
+                    suggestionsBox.style.display = 'none';
+                    suggestionIndexes[dictType] = -1;
+                }
+                // 聚焦到下一个字段
+                if (nextFieldId) {
+                    document.getElementById(nextFieldId).focus();
+                }
+            }
+            // 点击ESC键关闭建议框
+            else if (event.key === 'Escape') {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                suggestionIndexes[dictType] = -1;
+            }
+        }
+
+        // 处理呼号输入框的特殊按键事件
+        function handleCallKeydown(event) {
+            const suggestionsBox = document.getElementById('call-suggestions');
+            const suggestions = suggestionsBox.querySelectorAll('.suggestion-item');
+            const inputElement = document.getElementById('inp-call');
+            
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (suggestions.length > 0) {
+                    if (suggestionIndexes.call >= 0) {
+                        suggestions[suggestionIndexes.call].classList.remove('highlighted');
+                    }
+                    suggestionIndexes.call = (suggestionIndexes.call + 1) % suggestions.length;
+                    suggestions[suggestionIndexes.call].classList.add('highlighted');
+                    suggestions[suggestionIndexes.call].scrollIntoView({ block: 'nearest' });
+                }
+            } 
+            else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (suggestions.length > 0) {
+                    if (suggestionIndexes.call >= 0) {
+                        suggestions[suggestionIndexes.call].classList.remove('highlighted');
+                    }
+                    suggestionIndexes.call = (suggestionIndexes.call - 1 + suggestions.length) % suggestions.length;
+                    suggestions[suggestionIndexes.call].classList.add('highlighted');
+                    suggestions[suggestionIndexes.call].scrollIntoView({ block: 'nearest' });
+                }
+            }
+            else if (event.key === 'Tab') {
+                event.preventDefault();
+                if (suggestions.length > 0 && suggestionIndexes.call >= 0) {
+                    const el = suggestions[suggestionIndexes.call];
+                    const callVal = el.dataset.call || el.textContent;
+                    inputElement.value = callVal;
+                    // 填充关联字段
+                    if (el.dataset.qth) document.getElementById('inp-qth').value = el.dataset.qth;
+                    if (el.dataset.rig) document.getElementById('inp-rig').value = el.dataset.rig;
+                    if (el.dataset.pwr) document.getElementById('inp-pwr').value = el.dataset.pwr;
+                    if (el.dataset.ant) document.getElementById('inp-ant').value = el.dataset.ant;
+                    if (el.dataset.rem) document.getElementById('inp-rem').value = el.dataset.rem;
+                    suggestionsBox.innerHTML = '';
+                    suggestionsBox.style.display = 'none';
+                    suggestionIndexes.call = -1;
+                    selectInputText('inp-call');
+                }
+                // 聚焦到信号输入框
+                document.getElementById('inp-rst').focus();
+            }
+            else if (event.key === 'Enter') {
+                event.preventDefault();
+                // 如果有选中的建议，先用建议填充关联字段而不直接提交
+                if (suggestions.length > 0 && suggestionIndexes.call >= 0) {
+                    const el = suggestions[suggestionIndexes.call];
+                    const callVal = el.dataset.call || el.textContent;
+                    inputElement.value = callVal;
+                    if (el.dataset.qth) document.getElementById('inp-qth').value = el.dataset.qth;
+                    if (el.dataset.rig) document.getElementById('inp-rig').value = el.dataset.rig;
+                    if (el.dataset.pwr) document.getElementById('inp-pwr').value = el.dataset.pwr;
+                    if (el.dataset.ant) document.getElementById('inp-ant').value = el.dataset.ant;
+                    if (el.dataset.rem) document.getElementById('inp-rem').value = el.dataset.rem;
+                    suggestionsBox.innerHTML = '';
+                    suggestionsBox.style.display = 'none';
+                    suggestionIndexes.call = -1;
+                    // 聚焦信号输入，等待用户回车提交
+                    document.getElementById('inp-rst').focus();
+                } else {
+                    // 没有选中建议，直接提交
+                    addLog();
+                }
+            }
+            else if (event.key === 'Escape') {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                suggestionIndexes.call = -1;
+            }
+        }
+
+        // 选中输入框文本
+        function selectInputText(inputId) {
+            const input = document.getElementById(inputId);
+            input.focus();
+            input.select();
+        }
+
+        // 添加日志记录
+        function addLog() {
+            const call = document.getElementById('inp-call').value.trim();
+            if (!call) {
+                showStatusMessage('请输入呼号', 'error');
+                document.getElementById('inp-call').focus();
+                return;
+            }
+            
+            // 获取表单数据
+            const log = {
+                id: Date.now(),
+                date: document.getElementById('inp-date').value,
+                time: document.getElementById('inp-time').value,
+                op: document.getElementById('inp-op').value.trim(),
+                freq: document.getElementById('inp-freq').value.trim(),
+                net: document.getElementById('inp-net').value.trim(),
+                call: call,
+                rst: document.getElementById('inp-rst').value.trim(),
+                mode: document.getElementById('inp-mode').value,
+                qth: document.getElementById('inp-qth').value.trim(),
+                rig: document.getElementById('inp-rig').value.trim(),
+                pwr: document.getElementById('inp-pwr').value.trim(),
+                ant: document.getElementById('inp-ant').value.trim(),
+                rem: document.getElementById('inp-rem').value.trim()
+            };
+            
+            // 添加到日志列表
+            logs.unshift(log); // 最新的记录放在前面
+            saveData();
+            renderLogTable();
+            updateCountDisplay();
+            
+            // 自动将新输入的内容添加到对应字典（如果不存在）
+            addToDictIfNotExists('op', log.op);
+            addToDictIfNotExists('net', log.net);
+            addToDictIfNotExists('call', log.call);
+            if (log.op) addToDictIfNotExists('call', log.op);
+            addToDictIfNotExists('qth', log.qth);
+            addToDictIfNotExists('rig', log.rig);
+            addToDictIfNotExists('pwr', log.pwr);
+            addToDictIfNotExists('ant', log.ant);
+            try {
+                const key = log.call.toUpperCase();
+                const entry = { qth: log.qth || '', rig: log.rig || '', pwr: log.pwr || '', ant: log.ant || '', rem: log.rem || '' };
+                if (!callMap[key]) callMap[key] = [];
+                const exists = callMap[key].some(it => it.qth === entry.qth && it.rig === entry.rig && it.pwr === entry.pwr && it.ant === entry.ant && it.rem === entry.rem);
+                if (!exists) {
+                    callMap[key].push(entry);
+                    saveData();
+                    renderDict('call');
+                }
+            } catch (e) {
+                console.error('更新呼号映射失败', e);
+            }
+            
+            // 清空指定输入框（包含呼号）并聚焦到呼号
+            document.getElementById('inp-call').value = '';
+            document.getElementById('inp-qth').value = '';
+            document.getElementById('inp-rig').value = '';
+            document.getElementById('inp-pwr').value = '';
+            document.getElementById('inp-ant').value = '';
+            document.getElementById('inp-rem').value = '';
+            document.getElementById('inp-call').focus();
+            
+            showStatusMessage('记录已添加', 'success');
+        }
+
+        // 搜索呼号并显示历史匹配（支持从历史记录填充 QTH/Rig/Pwr/Ant/Rem）
+        function searchCallSuggestions(value) {
+            const suggestionsBox = document.getElementById('call-suggestions');
+            if (!suggestionsBox) return;
+
+            value = (value || '').trim().toLowerCase();
+            if (!value) {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                suggestionIndexes.call = -1;
+                return;
+            }
+
+            // 收集匹配的呼号（优先从 logs 中取有详情的记录）
+            const results = [];
+            const seen = new Set();
+
+            // 优先使用持久化的 callMap（管理界面维护），每个 mapping 作为独立建议
+            Object.keys(callMap).forEach(call => {
+                if (!call) return;
+                if (call.toLowerCase().includes(value)) {
+                    const arr = callMap[call] || [];
+                    if (arr.length === 0) {
+                        if (!seen.has(call)) { seen.add(call); results.push({ call, qth: '', rig: '', pwr: '', ant: '', rem: '' }); }
+                    } else {
+                        arr.forEach(item => {
+                            const key = `${call}||${item.qth||''}||${item.rig||''}||${item.pwr||''}||${item.ant||''}||${item.rem||''}`;
+                            if (!seen.has(key)) { seen.add(key); results.push({ call, qth: item.qth, rig: item.rig, pwr: item.pwr, ant: item.ant, rem: item.rem }); }
+                        });
+                    }
+                }
+            });
+
+            // 然后从 logs 中收集最近的匹配项（包含详细信息），作为补充
+            for (let i = 0; i < logs.length; i++) {
+                const lg = logs[i];
+                if (!lg || !lg.call) continue;
+                if (lg.call.toLowerCase().includes(value) || value === lg.call.toLowerCase()) {
+                    const key = `${lg.call}||${lg.qth||''}||${lg.rig||''}||${lg.pwr||''}||${lg.ant||''}||${lg.rem||''}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        results.push({ call: lg.call, qth: lg.qth, rig: lg.rig, pwr: lg.pwr, ant: lg.ant, rem: lg.rem });
+                    }
+                }
+            }
+
+            // 最后补充呼号字典中但无映射的呼号
+            dicts.call.forEach(c => {
+                if (c && c.toLowerCase().includes(value) && !seen.has(c)) {
+                    seen.add(c);
+                    results.push({ call: c, qth: '', rig: '', pwr: '', ant: '', rem: '' });
+                }
+            });
+
+            // 构建建议列表
+            if (results.length > 0) {
+                suggestionsBox.innerHTML = '';
+                results.forEach((item, idx) => {
+                    const div = document.createElement('div');
+                    div.className = `suggestion-item ${idx === 0 ? 'highlighted' : ''}`;
+                    const hint = [];
+                    if (item.qth) hint.push(item.qth);
+                    if (item.rig) hint.push(item.rig);
+                    if (item.pwr) hint.push(item.pwr);
+                    if (item.ant) hint.push(item.ant);
+                    if (item.rem) hint.push(item.rem);
+                    div.textContent = `${item.call}${hint.length ? ' — ' + hint.join(' | ') : ''}`;
+                    div.dataset.call = item.call || '';
+                    div.dataset.qth = item.qth || '';
+                    div.dataset.rig = item.rig || '';
+                    div.dataset.pwr = item.pwr || '';
+                    div.dataset.ant = item.ant || '';
+                    div.dataset.rem = item.rem || '';
+                    div.addEventListener('click', () => {
+                        document.getElementById('inp-call').value = div.dataset.call;
+                        // 自动填充关联字段（可修改后再次提交形成新组合）
+                        if (div.dataset.qth) document.getElementById('inp-qth').value = div.dataset.qth;
+                        if (div.dataset.rig) document.getElementById('inp-rig').value = div.dataset.rig;
+                        if (div.dataset.pwr) document.getElementById('inp-pwr').value = div.dataset.pwr;
+                        if (div.dataset.ant) document.getElementById('inp-ant').value = div.dataset.ant;
+                        if (div.dataset.rem) document.getElementById('inp-rem').value = div.dataset.rem;
+                        suggestionsBox.innerHTML = '';
+                        suggestionsBox.style.display = 'none';
+                        suggestionIndexes.call = -1;
+                        selectInputText('inp-call');
+                    });
+                    suggestionsBox.appendChild(div);
+                });
+                suggestionsBox.style.display = 'block';
+                suggestionIndexes.call = 0;
+            } else {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                suggestionIndexes.call = -1;
+            }
+        }
+
+        // 如果不存在则添加到字典
+        function addToDictIfNotExists(type, value) {
+            if (value && !dicts[type].includes(value)) {
+                dicts[type].push(value);
+                // 保持字典有序
+                dicts[type].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+                saveData();
+                renderDict(type);
+            }
+        }
+
+        // 渲染日志表格
+        function renderLogTable() {
+            const logBody = document.getElementById('logBody');
+            logBody.innerHTML = '';
+            
+            if (logs.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="11" style="text-align:center; padding:20px;">暂无记录</td>';
+                logBody.appendChild(row);
+                return;
+            }
+            
+            logs.forEach((log, index) => {
+                const row = document.createElement('tr');
+                row.className = 'fade-in';
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${log.date}</td>
+                    <td>${log.time}</td>
+                    <td>${log.call}</td>
+                    <td>${log.rst}</td>
+                    <td>${log.qth}</td>
+                    <td>${log.rig}</td>
+                    <td>${log.pwr}</td>
+                    <td>${log.ant}</td>
+                    <td>${log.rem}</td>
+                    <td>
+                        <button class="btn btn-outline btn-sm" onclick="deleteLog(${log.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                logBody.appendChild(row);
+            });
+            
+            // 同时更新日志数据管理标签页
+            renderLogDataTable();
+        }
+
+        // 渲染日志数据管理表格
+        function renderLogDataTable() {
+            const logDataBody = document.getElementById('log-data-body');
+            logDataBody.innerHTML = '';
+            
+            if (logs.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="10" style="text-align:center; padding:20px;">暂无记录</td>';
+                logDataBody.appendChild(row);
+                return;
+            }
+            
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${log.date}</td>
+                    <td>${log.time}</td>
+                    <td>${log.call}</td>
+                    <td>${log.rst}</td>
+                    <td>${log.qth || ''}</td>
+                    <td>${log.rig || ''}</td>
+                    <td>${log.pwr || ''}</td>
+                    <td>${log.ant || ''}</td>
+                    <td>${log.rem || ''}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="deleteLog(${log.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                logDataBody.appendChild(row);
+            });
+        }
+
+        // 更新计数显示
+        function updateCountDisplay() {
+            document.getElementById('count-display').textContent = logs.length;
+        }
+
+        // 删除日志记录
+        function deleteLog(id) {
+            if (confirm('确定要删除这条记录吗？')) {
+                logs = logs.filter(log => log.id !== id);
+                saveData();
+                renderLogTable();
+                updateCountDisplay();
+                showStatusMessage('记录已删除', 'success');
+            }
+        }
+
+        // 清空所有日志
+        function clearAllLogs() {
+            if (logs.length === 0) {
+                showStatusMessage('日志已为空', 'warning');
+                return;
+            }
+            
+            confirmClearLogs();
+        }
+
+        // 确认清空所有日志
+        function confirmClearLogs() {
+            if (confirm(`确定要清空所有${logs.length}条日志记录吗？此操作不可恢复！`)) {
+                logs = [];
+                saveData();
+                renderLogTable();
+                updateCountDisplay();
+                showStatusMessage('所有日志已清空', 'success');
+            }
+        }
+
+        // 显示状态消息
+        function showStatusMessage(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = 'status-message'; // 重置类
+            statusEl.classList.add(type, 'show');
+            
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 3000);
+        }
+
+        // 打开数据管理模态框
+        function openManager() {
+            document.getElementById('managerModal').style.display = 'flex';
+            renderLogDataTable();
+        }
+
+        // 关闭数据管理模态框
+        function closeManager() {
+            document.getElementById('managerModal').style.display = 'none';
+        }
+
+        // 渲染所有字典标签
+        function renderAllDictTags() {
+            for (let type in dicts) {
+                renderDictTags(type);
+            }
+        }
+
+        // 渲染指定字典的标签
+        function renderDictTags(type) {
+            const container = document.getElementById(`${type}-tags`);
+            if (!container) return;
+            
+            container.innerHTML = '';
+            dicts[type].forEach((item, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'tag';
+                let extra = '';
+                if (type === 'call') {
+                    const key = (item || '').toUpperCase();
+                    const mapArr = callMap[key] || [];
+                    extra = ` <small style="margin-left:6px; color:var(--text-light);">(${mapArr.length})</small>`;
+                }
+                tag.innerHTML = `
+                    ${item}${extra}
+                    <i class="fas fa-times" onclick="deleteDictItem('${type}', ${index})"></i>
+                `;
+                tag.addEventListener('click', (e) => {
+                    // 防止点击删除图标时触发编辑
+                    if (e.target.tagName !== 'I') {
+                        editDictItem(type, index, item);
+                    }
+                });
+                container.appendChild(tag);
+            });
+            
+            // 更新datalist（用于OP和台网）
+            if (type === 'op' || type === 'net') {
+                const datalist = document.getElementById(`dyn-list-${type}`);
+                if (datalist) {
+                    datalist.innerHTML = '';
+                    dicts[type].forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item;
+                        datalist.appendChild(option);
+                    });
+                }
+            }
+        }
+
+        // 切换呼号映射编辑器显示（在管理面板中）
+        function toggleCallMapEditor(hideOnly) {
+            const el = document.getElementById('callmap-editor');
+            if (!el) return;
+            if (hideOnly) {
+                el.style.display = 'none';
+                return;
+            }
+            if (el.style.display === 'none' || el.style.display === '') {
+                populateCallMapEditor();
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
+        // 将 callMap 填入编辑器文本框
+        function populateCallMapEditor() {
+            const txt = document.getElementById('callmap-text');
+            if (!txt) return;
+            const lines = [];
+            Object.keys(callMap).forEach(call => {
+                const arr = callMap[call] || [];
+                arr.forEach(item => {
+                    const parts = [item.qth||'', item.rig||'', item.pwr||'', item.ant||'', item.rem||''];
+                    lines.push(`${call}\t${parts.join('|')}`);
+                });
+            });
+            txt.value = lines.join('\n');
+        }
+
+        // 从编辑器保存呼号映射
+        function saveCallMapEditor() {
+            const txt = document.getElementById('callmap-text');
+            if (!txt) return;
+            const lines = txt.value.split('\n').map(l => l.trim()).filter(l => l);
+            const newMap = {};
+            lines.forEach(line => {
+                // 期望格式：CALL<TAB>QTH|RIG|PWR|ANT|REM
+                const parts = line.split('\t');
+                if (parts.length === 0) return;
+                const call = parts[0].trim().toUpperCase();
+                const dataStr = (parts[1] || '').trim();
+                const cols = dataStr.split('|').map(c => c.trim());
+                const item = { qth: cols[0] || '', rig: cols[1] || '', pwr: cols[2] || '', ant: cols[3] || '', rem: cols[4] || '' };
+                if (!newMap[call]) newMap[call] = [];
+                // 避免重复
+                const exists = newMap[call].some(it => it.qth===item.qth && it.rig===item.rig && it.pwr===item.pwr && it.ant===item.ant && it.rem===item.rem);
+                if (!exists) newMap[call].push(item);
+            });
+            callMap = newMap;
+            saveData();
+            renderDict('call');
+            toggleCallMapEditor(true);
+            showStatus('呼号映射已保存', 'success');
+        }
+
+        // 渲染呼号映射的可视化列表（支持逐条编辑/删除/新增）
+        function renderCallMapList() {
+            const container = document.getElementById('callmap-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // 新增条目的表单
+            const addWrap = document.createElement('div');
+            addWrap.style.display = 'flex';
+            addWrap.style.gap = '8px';
+            addWrap.style.marginBottom = '8px';
+
+            const inpCall = document.createElement('input'); inpCall.placeholder = '呼号'; inpCall.style.width = '12%'; inpCall.style.textTransform = 'uppercase';
+            const inpQth = document.createElement('input'); inpQth.placeholder = '位置'; inpQth.style.width = '18%';
+            const inpRig = document.createElement('input'); inpRig.placeholder = '设备'; inpRig.style.width = '16%';
+            const inpPwr = document.createElement('input'); inpPwr.placeholder = '功率'; inpPwr.style.width = '12%';
+            const inpAnt = document.createElement('input'); inpAnt.placeholder = '天线'; inpAnt.style.width = '14%';
+            const inpRem = document.createElement('input'); inpRem.placeholder = '备注'; inpRem.style.width = '14%';
+            const addBtn = document.createElement('button'); addBtn.className = 'btn btn-primary btn-sm'; addBtn.textContent = '添加映射';
+
+            addBtn.addEventListener('click', () => {
+                const call = (inpCall.value || '').trim().toUpperCase();
+                if (!call) { showStatus('请输入呼号', 'warning'); return; }
+                const entry = { qth: inpQth.value.trim(), rig: inpRig.value.trim(), pwr: inpPwr.value.trim(), ant: inpAnt.value.trim(), rem: inpRem.value.trim() };
+                if (!callMap[call]) callMap[call] = [];
+                const exists = callMap[call].some(it => it.qth===entry.qth && it.rig===entry.rig && it.pwr===entry.pwr && it.ant===entry.ant && it.rem===entry.rem);
+                if (exists) { showStatus('该映射已存在', 'warning'); return; }
+                callMap[call].push(entry);
+                saveData();
+                renderCallMapList();
+                renderDict('call');
+                inpCall.value = ''; inpQth.value = ''; inpRig.value = ''; inpPwr.value = ''; inpAnt.value = ''; inpRem.value = '';
+                showStatus('映射已添加', 'success');
+            });
+
+            addWrap.appendChild(inpCall); addWrap.appendChild(inpQth); addWrap.appendChild(inpRig); addWrap.appendChild(inpPwr); addWrap.appendChild(inpAnt); addWrap.appendChild(inpRem); addWrap.appendChild(addBtn);
+            container.appendChild(addWrap);
+
+            // 构建映射表
+            const table = document.createElement('table');
+            table.className = 'dict-editor';
+            const thead = document.createElement('thead');
+            thead.innerHTML = '<tr><th>呼号</th><th>位置</th><th>设备</th><th>功率</th><th>天线</th><th>备注</th><th>操作</th></tr>';
+            table.appendChild(thead);
+            const tbody = document.createElement('tbody');
+
+            Object.keys(callMap).sort().forEach(call => {
+                const arr = callMap[call] || [];
+                if (arr.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${call}</td><td></td><td></td><td></td><td></td><td></td><td><button class="btn btn-danger btn-sm" onclick="deleteCallMapEntry('${call}', 0)">删除</button></td>`;
+                    tbody.appendChild(tr);
+                } else {
+                    arr.forEach((m, idx) => {
+                        const tr = document.createElement('tr');
+                        tr.id = `callmap-${call}-${idx}`;
+                        tr.innerHTML = `
+                            <td>${call}</td>
+                            <td>${m.qth||''}</td>
+                            <td>${m.rig||''}</td>
+                            <td>${m.pwr||''}</td>
+                            <td>${m.ant||''}</td>
+                            <td>${m.rem||''}</td>
+                            <td>
+                                <button class="btn btn-outline btn-sm" onclick="editCallMapEntry('${call}', ${idx})">编辑</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteCallMapEntry('${call}', ${idx})">删除</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            });
+
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        // 编辑某条映射：将所在行替换为输入框和保存/取消按钮
+        function editCallMapEntry(call, idx) {
+            const key = call;
+            const arr = callMap[key] || [];
+            const item = arr[idx];
+            if (!item) return;
+            const tr = document.getElementById(`callmap-${call}-${idx}`);
+            if (!tr) return;
+            tr.innerHTML = '';
+
+            const tdCall = document.createElement('td'); tdCall.textContent = call;
+            const tdQth = document.createElement('td'); const iQth = document.createElement('input'); iQth.value = item.qth; iQth.style.width='100%'; tdQth.appendChild(iQth);
+            const tdRig = document.createElement('td'); const iRig = document.createElement('input'); iRig.value = item.rig; iRig.style.width='100%'; tdRig.appendChild(iRig);
+            const tdPwr = document.createElement('td'); const iPwr = document.createElement('input'); iPwr.value = item.pwr; iPwr.style.width='100%'; tdPwr.appendChild(iPwr);
+            const tdAnt = document.createElement('td'); const iAnt = document.createElement('input'); iAnt.value = item.ant; iAnt.style.width='100%'; tdAnt.appendChild(iAnt);
+            const tdRem = document.createElement('td'); const iRem = document.createElement('input'); iRem.value = item.rem; iRem.style.width='100%'; tdRem.appendChild(iRem);
+            const tdOps = document.createElement('td');
+            const saveBtn = document.createElement('button'); saveBtn.className='btn btn-primary btn-sm'; saveBtn.textContent='保存';
+            const cancelBtn = document.createElement('button'); cancelBtn.className='btn btn-outline btn-sm'; cancelBtn.textContent='取消';
+            saveBtn.addEventListener('click', () => {
+                const updated = { qth: iQth.value.trim(), rig: iRig.value.trim(), pwr: iPwr.value.trim(), ant: iAnt.value.trim(), rem: iRem.value.trim() };
+                callMap[key][idx] = updated;
+                saveData();
+                renderCallMapList();
+                renderDict('call');
+                showStatus('映射已更新', 'success');
+            });
+            cancelBtn.addEventListener('click', () => { renderCallMapList(); });
+            tdOps.appendChild(saveBtn); tdOps.appendChild(cancelBtn);
+
+            tr.appendChild(tdCall); tr.appendChild(tdQth); tr.appendChild(tdRig); tr.appendChild(tdPwr); tr.appendChild(tdAnt); tr.appendChild(tdRem); tr.appendChild(tdOps);
+        }
+
+        // 删除某条映射（只删除该条，不删除呼号字典项）
+        function deleteCallMapEntry(call, idx) {
+            if (!confirm('确定删除该条呼号映射吗？')) return;
+            const key = call;
+            if (!callMap[key]) return;
+            if (idx >= 0 && idx < callMap[key].length) {
+                callMap[key].splice(idx, 1);
+            }
+            // 保留空数组以便呼号仍显示（用户可以在字典中管理呼号是否存在）
+            if (!Array.isArray(callMap[key])) callMap[key] = [];
+            saveData();
+            renderCallMapList();
+            renderDict('call');
+            showStatus('映射已删除', 'success');
+        }
+
+        // 编辑字典项
+        function editDictItem(type, index, value) {
+            // 重置之前的编辑状态
+            if (currentDictEdit.type) {
+                document.getElementById(`update-${currentDictEdit.type}-btn`).disabled = true;
+            }
+            
+            // 设置当前编辑项
+            currentDictEdit = { type, index };
+            document.getElementById(`edit-${type}`).value = value;
+            document.getElementById(`update-${type}-btn`).disabled = false;
+            document.getElementById(`edit-${type}`).focus();
+        }
+
+                // 添加字典项
+        function addDictItem(type) {
+            const input = document.getElementById(`edit-${type}`);
+            const value = input.value.trim();
+            
+            if (!value) {
+                showStatus(`请输入${getDictDisplayName(type)}`, 'warning');
+                return;
+            }
+            
+            if (dicts[type].includes(value)) {
+                showStatus(`${getDictDisplayName(type)}已存在`, 'warning');
+                return;
+            }
+            
+            dicts[type].push(value);
+            dicts[type].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+            
+            input.value = '';
+            saveData();
+            renderDict(type);
+            updateDatalists();
+            showStatus(`${getDictDisplayName(type)}已添加`, 'success');
+        }
+
+        // 准备编辑字典项
+        function prepareEditDict(type, index) {
+            currentDictEdit = { type, index };
+            const input = document.getElementById(`edit-${type}`);
+            input.value = dicts[type][index];
+            input.focus();
+            
+            // 禁用添加按钮，启用更新按钮
+            document.querySelector(`button[onclick="addDictItem('${type}')"]`).disabled = true;
+            document.getElementById(`update-${type}-btn`).disabled = false;
+        }
+
+        // 更新字典项
+        function updateDictItem(type) {
+            const { index } = currentDictEdit;
+            if (index === -1 || currentDictEdit.type !== type) return;
+            
+            const input = document.getElementById(`edit-${type}`);
+            const value = input.value.trim();
+            
+            if (!value) {
+                showStatus(`请输入${getDictDisplayName(type)}`, 'warning');
+                return;
+            }
+            
+            if (dicts[type].includes(value) && dicts[type][index] !== value) {
+                showStatus(`${getDictDisplayName(type)}已存在`, 'warning');
+                return;
+            }
+            
+            dicts[type][index] = value;
+            dicts[type].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+            
+            input.value = '';
+            currentDictEdit = { type: '', index: -1 };
+            
+            // 启用添加按钮，禁用更新按钮
+            document.querySelector(`button[onclick="addDictItem('${type}')"]`).disabled = false;
+            document.getElementById(`update-${type}-btn`).disabled = true;
+            
+            saveData();
+            renderDict(type);
+            updateDatalists();
+            showStatus(`${getDictDisplayName(type)}已更新`, 'success');
+        }
+
+        // 删除字典项
+        function deleteDictItem(type, index) {
+            if (confirm(`确定要删除这个${getDictDisplayName(type)}吗？`)) {
+                dicts[type].splice(index, 1);
+                saveData();
+                renderDict(type);
+                updateDatalists();
+                showStatus(`${getDictDisplayName(type)}已删除`, 'success');
+            }
+        }
+
+        // 批量导入字典
+        function importDict(type) {
+            const textarea = document.getElementById(`import-${type}`);
+            const content = textarea.value.trim();
+            
+            if (!content) {
+                showStatus('请输入要导入的内容', 'warning');
+                return;
+            }
+            
+            const items = content.split('\n')
+                .map(item => item.trim())
+                .filter(item => item);
+            
+            if (items.length === 0) {
+                showStatus('没有有效的内容可导入', 'warning');
+                return;
+            }
+            
+            // 添加新项（去重）
+            items.forEach(item => {
+                if (!dicts[type].includes(item)) {
+                    dicts[type].push(item);
+                }
+            });
+            
+            // 排序
+            dicts[type].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+            
+            textarea.value = '';
+            saveData();
+            renderDict(type);
+            updateDatalists();
+            showStatus(`成功导入 ${items.length} 个${getDictDisplayName(type)}`, 'success');
+        }
+
+        // 获取字典显示名称
+        function getDictDisplayName(type) {
+            const names = {
+                qth: '位置',
+                rig: '设备',
+                pwr: '功率',
+                ant: '天线',
+                op: '操作员',
+                net: '台网',
+                call: '呼号'
+            };
+            return names[type] || type;
+        }
+
+        // 渲染指定字典并更新相关数据源（用于添加/编辑/删除后实时刷新）
+        function renderDict(type) {
+            renderDictTags(type);
+            updateDatalists();
+            if (type === 'call') {
+                renderCallMapList();
+            }
+        }
+
+        // 渲染所有字典
+        function renderDicts() {
+            renderAllDictTags();
+            updateDatalists();
+        }
+
+        // 更新 datalist 元素（用于 OP/NET 等）
+        function updateDatalists() {
+            ['op', 'net'].forEach(type => {
+                const datalist = document.getElementById(`dyn-list-${type}`);
+                if (!datalist) return;
+                datalist.innerHTML = '';
+                dicts[type].forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    datalist.appendChild(option);
+                });
+            });
+        }
+
+        // 搜索字典（通用方法，最终生效）
+        function searchDict(type, value) {
+            const suggestionsBox = document.getElementById(`${type}-suggestions`);
+            if (!suggestionsBox) return;
+
+            value = (value || '').trim();
+            if (!value) {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                suggestionIndexes[type] = -1;
+                return;
+            }
+
+            const q = value.toLowerCase();
+            let matches = [];
+
+            if (type === 'qth' || type === 'rig' || type === 'ant') {
+                matches = dicts[type].filter(item => {
+                    if (!item) return false;
+                    // 直接文本包含（中文或英文）
+                    if (item.toLowerCase().includes(q)) return true;
+
+                    // 使用 pinyin-match 库（如果可用）——兼容库返回 boolean 或对象
+                    if (typeof window.pinyinMatch === 'object' && typeof window.pinyinMatch.match === 'function') {
+                        try {
+                            const res = window.pinyinMatch.match(item, value);
+                            if (typeof res === 'boolean') {
+                                if (res) return true;
+                            } else if (res != null) {
+                                return true;
+                            }
+                        } catch (e) {
+                            // 忽略库错误，继续下一个策略
+                        }
+                    }
+
+                    // 回退：尝试首字母匹配（备用方案）
+                    try {
+                        if (matchPinyinInitials(item, value)) return true;
+                    } catch (e) {}
+
+                    return false;
+                });
+            } else {
+                matches = dicts[type].filter(item => item && item.toLowerCase().includes(q));
+            }
+
+            // 显示匹配项
+            if (matches.length > 0) {
+                suggestionsBox.innerHTML = '';
+                matches.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = `suggestion-item ${index === 0 ? 'highlighted' : ''}`;
+                    div.textContent = item;
+                    div.addEventListener('click', () => {
+                        document.getElementById(`inp-${type}`).value = item;
+                        suggestionsBox.innerHTML = '';
+                        suggestionsBox.style.display = 'none';
+                        suggestionIndexes[type] = -1;
+                    });
+                    suggestionsBox.appendChild(div);
+                });
+                suggestionsBox.style.display = 'block';
+                suggestionIndexes[type] = 0;
+            } else {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                suggestionIndexes[type] = -1;
+            }
+        }
+
+        // 处理输入框键盘事件
+        function handleInputKeydown(event, type, nextFieldId) {
+            // 如果没有指定类型，直接处理Enter键
+            if (!type) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (nextFieldId) document.getElementById(nextFieldId).focus();
+                }
+                return;
+            }
+            
+            const suggestionsBox = document.getElementById(`${type}-suggestions`);
+            const suggestionItems = suggestionsBox.querySelectorAll('.suggestion-item');
+            const input = document.getElementById(`inp-${type}`);
+            
+            // 处理上下箭头
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                if (suggestionItems.length === 0) return;
+                
+                // 移除当前高亮
+                if (suggestionIndexes[type] >= 0 && suggestionIndexes[type] < suggestionItems.length) {
+                    suggestionItems[suggestionIndexes[type]].classList.remove('highlighted');
+                }
+                
+                // 移动到下一个
+                suggestionIndexes[type] = (suggestionIndexes[type] + 1) % suggestionItems.length;
+                
+                // 添加高亮
+                suggestionItems[suggestionIndexes[type]].classList.add('highlighted');
+                
+                // 滚动到可见
+                suggestionItems[suggestionIndexes[type]].scrollIntoView({ block: 'nearest' });
+            } 
+            // 上箭头
+            else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (suggestionItems.length === 0) return;
+                
+                // 移除当前高亮
+                if (suggestionIndexes[type] >= 0 && suggestionIndexes[type] < suggestionItems.length) {
+                    suggestionItems[suggestionIndexes[type]].classList.remove('highlighted');
+                }
+                
+                // 移动到上一个
+                suggestionIndexes[type] = (suggestionIndexes[type] - 1 + suggestionItems.length) % suggestionItems.length;
+                
+                // 添加高亮
+                suggestionItems[suggestionIndexes[type]].classList.add('highlighted');
+                
+                // 滚动到可见
+                suggestionItems[suggestionIndexes[type]].scrollIntoView({ block: 'nearest' });
+            } 
+            // 回车键
+            else if (event.key === 'Enter') {
+                event.preventDefault();
+                
+                // 如果有选中的建议项，使用它
+                if (suggestionIndexes[type] >= 0 && suggestionIndexes[type] < suggestionItems.length) {
+                    input.value = suggestionItems[suggestionIndexes[type]].textContent;
+                    suggestionsBox.innerHTML = '';
+                    suggestionIndexes[type] = -1;
+                }
+                
+                // 聚焦到下一个字段
+                if (nextFieldId) {
+                    document.getElementById(nextFieldId).focus();
+                }
+            }
+        }
+
+        // 打开管理模态框
+        function openManager() {
+            document.getElementById('managerModal').style.display = 'flex';
+            renderDicts();
+            renderLogDataTable();
+        }
+
+        // 关闭管理模态框
+        function closeManager() {
+            document.getElementById('managerModal').style.display = 'none';
+        }
+
+        // 导出为Excel
+        function exportExcel() {
+            if (logs.length === 0) {
+                showStatus('没有记录可导出', 'warning');
+                return;
+            }
+            
+            // 准备导出数据
+            const exportData = logs.map(log => {
+                return {
+                    '日期': log.date,
+                    '时间': log.time,
+                    '主控(OP)': log.op,
+                    '频率': log.freq,
+                    '台网名称': log.net,
+                    '呼号': log.call,
+                    '信号': log.rst,
+                    '模式': log.mode,
+                    '位置': log.qth,
+                    '主控设备': log.rig,
+                    '功率': log.pwr,
+                    '天线': log.ant,
+                    '备注': log.rem
+                };
+            });
+            
+            // 创建工作簿和工作表
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "日志记录");
+            
+            // 生成文件名（包含当前日期）
+            const today = new Date();
+            const fileName = `NetLog_${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2,'0')}${today.getDate().toString().padStart(2,'0')}.xlsx`;
+            
+            // 导出文件
+            XLSX.writeFile(wb, fileName);
+            showStatus('导出成功', 'success');
+        }
+
+        // 导出所有字典
+        function exportAllDicts() {
+            // 准备导出数据
+            const exportData = {};
+            Object.keys(dicts).forEach(type => {
+                exportData[getDictDisplayName(type)] = dicts[type].map((item, index) => ({
+                    '序号': index + 1,
+                    '内容': item
+                }));
+            });
+            // 添加呼号映射表
+            const callMappings = [];
+            Object.keys(callMap).forEach(call => {
+                (callMap[call] || []).forEach((m, idx) => {
+                    callMappings.push({ '呼号': call, '序号': idx+1, '位置': m.qth || '', '设备': m.rig || '', '功率': m.pwr || '', '天线': m.ant || '', '备注': m.rem || '' });
+                });
+                if ((callMap[call] || []).length === 0) {
+                    callMappings.push({ '呼号': call, '序号': 1, '位置': '', '设备': '', '功率': '', '天线': '', '备注': '' });
+                }
+            });
+            if (callMappings.length > 0) exportData['呼号映射'] = callMappings;
+            
+            // 创建工作簿
+            const wb = XLSX.utils.book_new();
+            
+            // 为每个字典创建一个工作表
+            Object.keys(exportData).forEach(sheetName => {
+                const ws = XLSX.utils.json_to_sheet(exportData[sheetName]);
+                XLSX.utils.book_append_sheet(wb, ws, sheetName);
+            });
+            
+            // 生成文件名
+            const today = new Date();
+            const fileName = `NetLog_Dicts_${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2,'0')}${today.getDate().toString().padStart(2,'0')}.xlsx`;
+            
+            // 导出文件
+            XLSX.writeFile(wb, fileName);
+            showStatus('字典导出成功', 'success');
+        }
+
+        // 显示状态消息
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = 'status-message'; // 重置类
+            statusEl.classList.add(type, 'show');
+            
+            // 3秒后隐藏
+            setTimeout(() => {
+                statusEl.classList.remove('show');
+            }, 3000);
+        }
+
+        // 更新计数显示
+        function updateCountDisplay() {
+            document.getElementById('count-display').textContent = logs.length;
+        }
+
+        // 切换主题
+        function toggleTheme() {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            localStorage.setItem('netLogDarkMode', isDark);
+            // 更新图标
+            const icon = document.querySelector('.fa-moon').parentElement.querySelector('i');
+            if (isDark) {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        // 检查并应用保存的主题设置
+        function applySavedTheme() {
+            const isDark = localStorage.getItem('netLogDarkMode') === 'true';
+            if (isDark) {
+                document.body.classList.add('dark');
+                const icon = document.querySelector('.fa-moon').parentElement.querySelector('i');
+                icon.className = 'fas fa-sun';
+            }
+        }
+
+        // 初始化时应用主题
+        applySavedTheme();
+    </script>
+</body>
+</html>
