@@ -596,6 +596,11 @@
                         <i class="fas fa-download"></i> 导出字典
                         <span class="tooltip-text">备份所有字典数据</span>
                     </button>
+                    <input type="file" id="import-file-input" accept="application/json" style="display:none" onchange="handleImportFile(event)">
+                    <button class="btn btn-outline btn-sm tooltip" onclick="document.getElementById('import-file-input').click()">
+                        <i class="fas fa-upload"></i> 导入字典
+                        <span class="tooltip-text">导入字典和呼号映射</span>
+                    </button>
                     <button class="btn btn-outline btn-sm tooltip" onclick="clearAllLogs()">
                         <i class="fas fa-trash"></i> 清空日志
                         <span class="tooltip-text">删除所有记录</span>
@@ -1126,6 +1131,7 @@
             if (event.key === 'ArrowDown') {
                 event.preventDefault();
                 if (suggestions.length > 0) {
+                    // 移除上一个选中项的高亮
                     if (suggestionIndexes[dictType] >= 0) {
                         suggestions[suggestionIndexes[dictType]].classList.remove('highlighted');
                     }
@@ -1449,6 +1455,7 @@
             }
         }
 
+        // 渲染日志表格
         function renderLogTable() {
             const logBody = document.getElementById('logBody');
             logBody.innerHTML = '';
@@ -1802,7 +1809,7 @@
             tr.appendChild(tdCall); tr.appendChild(tdQth); tr.appendChild(tdRig); tr.appendChild(tdPwr); tr.appendChild(tdAnt); tr.appendChild(tdRem); tr.appendChild(tdOps);
         }
 
-        // 删除某条映射
+        // 删除某条映射（只删除该条，不删除呼号字典项）
         function deleteCallMapEntry(call, idx) {
             if (!confirm('确定删除该条呼号映射吗？')) return;
             const key = call;
@@ -2149,6 +2156,7 @@
             document.getElementById('managerModal').style.display = 'none';
         }
 
+        // 导出为Excel（首部只显示本次点名的固定信息，合并标题、居中对齐并设置样式）
         function exportExcel() {
             if (logs.length === 0) {
                 showStatus('没有记录可导出', 'warning');
@@ -2160,6 +2168,7 @@
                 const opMaps = callMap[opKey] || [];
                 const opDetail = opMaps.length > 0 ? opMaps[0] : { qth: first.qth || '', rig: first.rig || '', pwr: first.pwr || '', ant: first.ant || '' };
 
+                // 构建 AOA，使用 9 列（对应后续数据列）
                 const aoa = [];
                 aoa.push(['台网点名信息', '', '', '', '', '', '', '', '']);
                 aoa.push(['日期', first.date || '', '主控(OP)', first.op || '', '频率', first.freq || '', '台网名称', first.net || '', '']);
@@ -2200,6 +2209,7 @@
                     { wch: 20 }
                 ];
 
+                // 设置样式：居中对齐，标题加粗并增大字体，表头加粗并填充背景色
                 const range = XLSX.utils.decode_range(ws['!ref']);
                 for (let R = range.s.r; R <= range.e.r; ++R) {
                     for (let C = range.s.c; C <= range.e.c; ++C) {
@@ -2207,6 +2217,7 @@
                         const cell = ws[cell_addr];
                         if (!cell) continue;
 
+                        // 基本居中样式
                         cell.s = cell.s || {};
                         cell.s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
 
@@ -2215,6 +2226,7 @@
                             cell.s.font = { name: 'Arial', sz: 14, bold: true };
                         }
 
+                        // 表头行（第5行，0-based = 4）样式
                         if (R === 4) {
                             cell.s.font = Object.assign({}, cell.s.font || {}, { bold: true });
                             cell.s.fill = { patternType: 'solid', fgColor: { rgb: 'FFEEF6FF' } };
@@ -2236,6 +2248,93 @@
                 XLSX.writeFile(wb, fileName);
                 showStatus('导出成功', 'success');
             }
+
+        // 导出所有字典及呼号映射为 JSON 文件
+        function exportAllDicts() {
+            try {
+                const payload = {
+                    dicts: dicts,
+                    callMap: callMap
+                };
+                const json = JSON.stringify(payload, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const now = new Date();
+                const fn = `NetLog_dicts_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}.json`;
+                a.href = url;
+                a.download = fn;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showStatus('字典已导出', 'success');
+            } catch (e) {
+                console.error('导出字典失败', e);
+                showStatus('导出字典失败', 'error');
+            }
+        }
+
+        // 触发文件选择以导入字典JSON
+        function importAllDicts() {
+            const input = document.getElementById('import-file-input');
+            if (input) input.click();
+        }
+
+        // 处理导入的文件，合并到现有 dicts 与 callMap
+        function handleImportFile(event) {
+            const file = event.target && event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data || (typeof data !== 'object')) {
+                        showStatus('导入失败：文件格式不正确', 'error');
+                        return;
+                    }
+
+                    // 合并 dicts
+                    if (data.dicts && typeof data.dicts === 'object') {
+                        for (const key in data.dicts) {
+                            if (!data.dicts.hasOwnProperty(key)) continue;
+                            const arr = Array.isArray(data.dicts[key]) ? data.dicts[key] : [];
+                            if (!dicts[key]) dicts[key] = [];
+                            arr.forEach(item => {
+                                if (item && !dicts[key].includes(item)) dicts[key].push(item);
+                            });
+                            dicts[key].sort((a, b) => a.localeCompare(b, 'zh-CN'));
+                        }
+                    }
+
+                    // 合并 callMap
+                    if (data.callMap && typeof data.callMap === 'object') {
+                        for (const call in data.callMap) {
+                            if (!data.callMap.hasOwnProperty(call)) continue;
+                            const items = Array.isArray(data.callMap[call]) ? data.callMap[call] : [];
+                            if (!callMap[call]) callMap[call] = [];
+                            items.forEach(it => {
+                                const exists = callMap[call].some(e => e.qth === it.qth && e.rig === it.rig && e.pwr === it.pwr && e.ant === it.ant && e.rem === it.rem);
+                                if (!exists) callMap[call].push(it);
+                            });
+                        }
+                    }
+
+                    saveData();
+                    renderDicts();
+                    renderCallMapList();
+                    showStatus('字典导入并合并完成', 'success');
+                } catch (err) {
+                    console.error('导入失败', err);
+                    showStatus('导入失败：无法解析 JSON', 'error');
+                } finally {
+                    // 清理文件输入以便可重复导入同一文件
+                    try { event.target.value = ''; } catch (e) {}
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
 
         // 更新计数显示
         function updateCountDisplay() {
@@ -2271,4 +2370,3 @@
     </script>
 </body>
 </html>
-
