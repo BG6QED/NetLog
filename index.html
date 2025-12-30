@@ -493,7 +493,7 @@
                 <div class="row-2">
                     <div class="input-group">
                         <label>频率 (Freq)</label>
-                        <input type="text" id="inp-freq" value="438.900" 
+                        <input type="text" id="inp-freq" value="438.500" 
                                onkeydown="handleInputKeydown(event, null, 'inp-net')">
                     </div>
                     <div class="input-group">
@@ -1126,7 +1126,6 @@
             if (event.key === 'ArrowDown') {
                 event.preventDefault();
                 if (suggestions.length > 0) {
-                    // 移除上一个选中项的高亮
                     if (suggestionIndexes[dictType] >= 0) {
                         suggestions[suggestionIndexes[dictType]].classList.remove('highlighted');
                     }
@@ -1450,7 +1449,6 @@
             }
         }
 
-        // 渲染日志表格
         function renderLogTable() {
             const logBody = document.getElementById('logBody');
             logBody.innerHTML = '';
@@ -1570,6 +1568,11 @@
             setTimeout(() => {
                 statusEl.classList.remove('show');
             }, 3000);
+        }
+
+        // 兼容旧的 showStatus 调用
+        function showStatus(message, type = 'info') {
+            showStatusMessage(message, type);
         }
 
         // 打开数据管理模态框
@@ -1799,7 +1802,7 @@
             tr.appendChild(tdCall); tr.appendChild(tdQth); tr.appendChild(tdRig); tr.appendChild(tdPwr); tr.appendChild(tdAnt); tr.appendChild(tdRem); tr.appendChild(tdOps);
         }
 
-        // 删除某条映射（只删除该条，不删除呼号字典项）
+        // 删除某条映射
         function deleteCallMapEntry(call, idx) {
             if (!confirm('确定删除该条呼号映射吗？')) return;
             const key = call;
@@ -2073,6 +2076,7 @@
             }
             
             const suggestionsBox = document.getElementById(`${type}-suggestions`);
+            if (!suggestionsBox) return; // 防御：如果没有建议框，直接返回
             const suggestionItems = suggestionsBox.querySelectorAll('.suggestion-item');
             const input = document.getElementById(`inp-${type}`);
             
@@ -2120,14 +2124,15 @@
                 
                 // 如果有选中的建议项，使用它
                 if (suggestionIndexes[type] >= 0 && suggestionIndexes[type] < suggestionItems.length) {
-                    input.value = suggestionItems[suggestionIndexes[type]].textContent;
+                    if (input) input.value = suggestionItems[suggestionIndexes[type]].textContent;
                     suggestionsBox.innerHTML = '';
                     suggestionIndexes[type] = -1;
                 }
                 
                 // 聚焦到下一个字段
                 if (nextFieldId) {
-                    document.getElementById(nextFieldId).focus();
+                    const nextEl = document.getElementById(nextFieldId);
+                    if (nextEl) nextEl.focus();
                 }
             }
         }
@@ -2144,98 +2149,93 @@
             document.getElementById('managerModal').style.display = 'none';
         }
 
-        // 导出为Excel
         function exportExcel() {
             if (logs.length === 0) {
                 showStatus('没有记录可导出', 'warning');
                 return;
             }
-            
-            // 准备导出数据
-            const exportData = logs.map(log => {
-                return {
-                    '日期': log.date,
-                    '时间': log.time,
-                    '(OP)': log.op,
-                    '频率': log.freq,
-                    '台网名称': log.net,
-                    '呼号': log.call,
-                    '信号': log.rst,
-                    '模式': log.mode,
-                    '位置': log.qth,
-                    '设备': log.rig,
-                    '功率': log.pwr,
-                    '天线': log.ant,
-                    '备注': log.rem
-                };
-            });
-            
-            // 创建工作簿和工作表
-            const ws = XLSX.utils.json_to_sheet(exportData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "日志记录");
-            
-            // 生成文件名（包含当前日期）
-            const today = new Date();
-            const fileName = `NetLog_${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2,'0')}${today.getDate().toString().padStart(2,'0')}.xlsx`;
-            
-            // 导出文件
-            XLSX.writeFile(wb, fileName);
-            showStatus('导出成功', 'success');
-        }
 
-        // 导出所有字典
-        function exportAllDicts() {
-            // 准备导出数据
-            const exportData = {};
-            Object.keys(dicts).forEach(type => {
-                exportData[getDictDisplayName(type)] = dicts[type].map((item, index) => ({
-                    '序号': index + 1,
-                    '内容': item
-                }));
-            });
-            // 添加呼号映射表
-            const callMappings = [];
-            Object.keys(callMap).forEach(call => {
-                (callMap[call] || []).forEach((m, idx) => {
-                    callMappings.push({ '呼号': call, '序号': idx+1, '位置': m.qth || '', '设备': m.rig || '', '功率': m.pwr || '', '天线': m.ant || '', '备注': m.rem || '' });
+                const first = logs[0];
+                const opKey = (first.op || '').toUpperCase();
+                const opMaps = callMap[opKey] || [];
+                const opDetail = opMaps.length > 0 ? opMaps[0] : { qth: first.qth || '', rig: first.rig || '', pwr: first.pwr || '', ant: first.ant || '' };
+
+                const aoa = [];
+                aoa.push(['台网点名信息', '', '', '', '', '', '', '', '']);
+                aoa.push(['日期', first.date || '', '主控(OP)', first.op || '', '频率', first.freq || '', '台网名称', first.net || '', '']);
+                aoa.push(['主控位置', opDetail.qth || '', '主控设备', opDetail.rig || '', '主控功率', opDetail.pwr || '', '主控天线', opDetail.ant || '', '']);
+                aoa.push([]);
+                const header = ['时间', '呼号', '信号', '模式', '位置', '设备', '功率', '天线', '备注'];
+                aoa.push(header);
+                logs.forEach(log => {
+                    aoa.push([
+                        log.time || '',
+                        log.call || '',
+                        log.rst || '',
+                        log.mode || '',
+                        log.qth || '',
+                        log.rig || '',
+                        log.pwr || '',
+                        log.ant || '',
+                        log.rem || ''
+                    ]);
                 });
-                if ((callMap[call] || []).length === 0) {
-                    callMappings.push({ '呼号': call, '序号': 1, '位置': '', '设备': '', '功率': '', '天线': '', '备注': '' });
-                }
-            });
-            if (callMappings.length > 0) exportData['呼号映射'] = callMappings;
-            
-            // 创建工作簿
-            const wb = XLSX.utils.book_new();
-            
-            // 为每个字典创建一个工作表
-            Object.keys(exportData).forEach(sheetName => {
-                const ws = XLSX.utils.json_to_sheet(exportData[sheetName]);
-                XLSX.utils.book_append_sheet(wb, ws, sheetName);
-            });
-            
-            // 生成文件名
-            const today = new Date();
-            const fileName = `NetLog_Dicts_${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2,'0')}${today.getDate().toString().padStart(2,'0')}.xlsx`;
-            
-            // 导出文件
-            XLSX.writeFile(wb, fileName);
-            showStatus('字典导出成功', 'success');
-        }
 
-        // 显示状态消息
-        function showStatus(message, type = 'info') {
-            const statusEl = document.getElementById('statusMessage');
-            statusEl.textContent = message;
-            statusEl.className = 'status-message'; // 重置类
-            statusEl.classList.add(type, 'show');
-            
-            // 3秒后隐藏
-            setTimeout(() => {
-                statusEl.classList.remove('show');
-            }, 3000);
-        }
+                const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+                // 合并标题（第一行合并 A1:I1）
+                ws['!merges'] = ws['!merges'] || [];
+                ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+
+                // 列宽设置（wch）
+                ws['!cols'] = [
+                    { wch: 12 },
+                    { wch: 18 },
+                    { wch: 10 },
+                    { wch: 10 },
+                    { wch: 14 },
+                    { wch: 14 },
+                    { wch: 8 },
+                    { wch: 12 },
+                    { wch: 20 }
+                ];
+
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const cell_addr = XLSX.utils.encode_cell({ r: R, c: C });
+                        const cell = ws[cell_addr];
+                        if (!cell) continue;
+
+                        cell.s = cell.s || {};
+                        cell.s.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+
+                        // 第一行（大标题）特殊样式
+                        if (R === 0) {
+                            cell.s.font = { name: 'Arial', sz: 14, bold: true };
+                        }
+
+                        if (R === 4) {
+                            cell.s.font = Object.assign({}, cell.s.font || {}, { bold: true });
+                            cell.s.fill = { patternType: 'solid', fgColor: { rgb: 'FFEEF6FF' } };
+                            cell.s.border = {
+                                top: { style: 'thin', color: { rgb: 'FFCCCCCC' } },
+                                bottom: { style: 'thin', color: { rgb: 'FFCCCCCC' } },
+                                left: { style: 'thin', color: { rgb: 'FFCCCCCC' } },
+                                right: { style: 'thin', color: { rgb: 'FFCCCCCC' } }
+                            };
+                        }
+                    }
+                }
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, '日志记录');
+
+                const today = new Date();
+                const fileName = `NetLog_${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2,'0')}${today.getDate().toString().padStart(2,'0')}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                showStatus('导出成功', 'success');
+            }
 
         // 更新计数显示
         function updateCountDisplay() {
@@ -2270,6 +2270,4 @@
         applySavedTheme();
     </script>
 </body>
-
 </html>
-
